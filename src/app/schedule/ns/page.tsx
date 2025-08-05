@@ -2,16 +2,23 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Users, Clock, Sun, Moon, Sunrise, Sunset, Edit3, Plus, Trash2, X } from 'lucide-react';
 
+type DragItem = {
+  staffName: string;
+  day: number;
+  shiftType: string;
+};
+
 const ShiftManagementTool = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isAdmin, setIsAdmin] = useState(false);
-  const [shifts, setShifts] = useState({});
-  const [draggedItem, setDraggedItem] = useState(null);
+  const [shifts, setShifts] = useState<Record<string, Record<string, string>>>({});
+  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null); 
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [modalType, setModalType] = useState(''); // 'nurse' or 'helper'
   const [newStaffName, setNewStaffName] = useState('');
-  const [customNurses, setCustomNurses] = useState([]);
-  const [customHelpers, setCustomHelpers] = useState([]);
+  const [customNurses, setCustomNurses] = useState<string[]>([]);
+  const [customHelpers, setCustomHelpers] = useState<string[]>([]);
+
 
   // スタッフデータ（初期値）
   const initialNurses = [
@@ -39,18 +46,19 @@ const ShiftManagementTool = () => {
   };
 
   // 月の日数を取得
-  const getDaysInMonth = (date) => {
+  const getDaysInMonth = (date: Date): number => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
-  // 曜日を取得
-  const getDayOfWeek = (date, day) => {
-    const targetDate = new Date(date.getFullYear(), date.getMonth(), day);
+
+  const getDayOfWeek = (date: Date, day: number): string => {
+  const targetDate = new Date(date.getFullYear(), date.getMonth(), day);
     return ['日', '月', '火', '水', '木', '金', '土'][targetDate.getDay()];
   };
 
+
   // 月を変更
-  const changeMonth = (direction) => {
+  const changeMonth = (direction: number) => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
       newDate.setMonth(prev.getMonth() + direction);
@@ -59,7 +67,7 @@ const ShiftManagementTool = () => {
   };
 
   // スタッフがカスタム追加されたものかチェック
-  const isCustomStaff = (staffName, staffType) => {
+  const isCustomStaff = (staffName: string, staffType: string): boolean => {
     if (staffType === 'nurse') {
       return customNurses.includes(staffName);
     } else if (staffType === 'helper') {
@@ -67,6 +75,7 @@ const ShiftManagementTool = () => {
     }
     return false;
   };
+
 
   // スタッフ追加
   const addStaff = () => {
@@ -83,9 +92,9 @@ const ShiftManagementTool = () => {
   };
 
   // スタッフ削除
-  const removeStaff = (staffName, staffType) => {
+  const removeStaff = (staffName: string, staffType: string): void => {
     // まずシフトからも削除
-    const newShifts = { ...shifts };
+    const newShifts: Record<string, Record<string, string>> = { ...shifts };
     Object.keys(newShifts).forEach(dateKey => {
       if (newShifts[dateKey][staffName]) {
         delete newShifts[dateKey][staffName];
@@ -103,7 +112,7 @@ const ShiftManagementTool = () => {
 
   // 自動シフト生成
   const generateAutoShift = () => {
-    const newShifts = {};
+    const newShifts: Record<string, Record<string, string>> = {};
     const daysInMonth = getDaysInMonth(currentDate);
     
     for (let day = 1; day <= daysInMonth; day++) {
@@ -137,27 +146,36 @@ const ShiftManagementTool = () => {
   }, [currentDate]);
 
   // 特定の日のシフト情報を取得
-  const getDayShifts = (day) => {
+  const getDayShifts = (day: number): Record<string, string> => {
     const dateKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${day}`;
     return shifts[dateKey] || {};
   };
 
   // スタッフの特定日のシフトを取得
-  const getStaffShift = (staffName, day) => {
+  const getStaffShift = (staffName: string, day: number): string | null => {
     const dayShifts = getDayShifts(day);
     return dayShifts[staffName] || null;
   };
 
   // ドラッグ開始
-  const handleDragStart = (e, staffName, day, shiftType) => {
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    staffName: string,
+    day: number,
+    shiftType: string
+  ): void => {
     if (!isAdmin) return;
-    setDraggedItem({ staffName, day, shiftType });
+    setDraggedItem({ staffName, day, shiftType }); // ✅ OK!
     e.dataTransfer.effectAllowed = 'move';
   };
 
   // ドロップ処理
-  const handleDrop = (e, targetStaffName, targetDay) => {
-    e.preventDefault();
+    const handleDrop = (
+      e: React.DragEvent<HTMLTableCellElement>,
+      targetStaffName: string,
+      targetDay: number
+    ): void => {
+      e.preventDefault();
     if (!isAdmin || !draggedItem) return;
 
     const { staffName: sourceStaff, day: sourceDay, shiftType } = draggedItem;
@@ -182,12 +200,12 @@ const ShiftManagementTool = () => {
   };
 
   // ドラッグオーバー
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLTableCellElement>): void => {
     e.preventDefault();
   };
 
   // シフトを削除
-  const removeShift = (staffName, day) => {
+  const removeShift = (staffName: string, day: number): void => {
     if (!isAdmin) return;
     
     const newShifts = { ...shifts };
@@ -201,7 +219,7 @@ const ShiftManagementTool = () => {
   };
 
   // シフト追加
-  const addShift = (staffName, day, shiftType) => {
+  const addShift = (staffName: string, day: number, shiftType: string): void => {
     if (!isAdmin) return;
     
     const newShifts = { ...shifts };
@@ -378,7 +396,11 @@ const ShiftManagementTool = () => {
                   </td>
                   {monthDays.map(day => {
                     const shift = getStaffShift(nurse, day);
-                    const shiftInfo = shift ? shiftTypes[shift] : null;
+                    const shiftInfo =
+                      shift && shift in shiftTypes
+                        ? shiftTypes[shift as keyof typeof shiftTypes]
+                        : null;
+
                     const dayOfWeek = getDayOfWeek(currentDate, day);
                     const isWeekend = dayOfWeek === '土' || dayOfWeek === '日';
                     
@@ -447,7 +469,11 @@ const ShiftManagementTool = () => {
                   </td>
                   {monthDays.map(day => {
                     const shift = getStaffShift(helper, day);
-                    const shiftInfo = shift ? shiftTypes[shift] : null;
+                    const shiftInfo =
+                      shift && shift in shiftTypes
+                        ? shiftTypes[shift as keyof typeof shiftTypes]
+                        : null;
+
                     const dayOfWeek = getDayOfWeek(currentDate, day);
                     const isWeekend = dayOfWeek === '土' || dayOfWeek === '日';
                     
