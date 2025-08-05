@@ -14,7 +14,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: -300, opacity: 0 }}
         transition={{ duration: 0.4, ease: 'easeInOut' }}
-        style={{ position: 'absolute', width: '100%' }}
+        style={{ position: 'relative', width: '100%' }} // ← 修正ポイント
       >
         {children}
       </motion.div>
