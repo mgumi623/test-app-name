@@ -1,6 +1,8 @@
+// next.config.ts
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    turbo: false, // ✅ Webpackを使うように切り替え
+    appDir: true,
   },
 };
 
