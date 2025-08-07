@@ -13,6 +13,7 @@ export default function Home() {
           alt="SDX logo"
           width={180}
           height={38}
+          priority
         />
 
         <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">

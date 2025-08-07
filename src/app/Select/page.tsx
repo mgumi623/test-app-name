@@ -19,8 +19,8 @@ const DepartmentSelection = () => {
         router.push('/schedule/ns');
       } else if (department === 'リハビリテーション部' && option === '予定表') {
         router.push('/schedule/riha');
-      } else if (department === '地域連携部' && option === '作成中') {
-        router.push('/test');
+      } else if (department === '全部署' && option === '意見交流') {
+        router.push('/corporate');
       } else if (department === '全部署' && option === 'AI Chat') {
         router.push('/AIchat');
       }
@@ -31,7 +31,7 @@ const DepartmentSelection = () => {
     { department: '全部署',           option: 'AI Chat', Icon: Activity },
     { department: '看護部',           option: 'シフト',   Icon: Heart },
     { department: 'リハビリテーション部', option: '予定表',   Icon: Activity },
-    { department: '地域連携部',       option: '作成中',   Icon: Activity }, 
+    { department: '全部署',       option: '意見交流',   Icon: Activity }, 
   ];
 
   return (
