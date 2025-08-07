@@ -15,6 +15,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+// Git test line to force detection
 
 /** ------------------------------------------------------------------
  *  型定義

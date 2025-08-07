@@ -26,6 +26,7 @@ const DepartmentSelection = () => {
       }
     }, 800);
   };
+// Navigate to corporate
 
   const options = [
     { department: '全部署',           option: 'AI Chat', Icon: Activity },
