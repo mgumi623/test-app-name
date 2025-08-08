@@ -1,91 +1,188 @@
 'use client';
-import React, { useState } from 'react';
-import { Heart, Activity } from 'lucide-react';
+import React, { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Activity,
+  Heart,
+  MessageSquare,
+  Bot,
+  Users,
+  CalendarClock,
+  Loader2,
+} from 'lucide-react';
 
-const DepartmentSelection = () => {
-  const router = useRouter();
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const handleOptionSelect = (department: string, option: string) => {
-    if (isAnimating) return;
-
-    setIsAnimating(true);
-
-    setTimeout(() => {
-      setIsAnimating(false);
-      // ページ遷移
-      if (department === '看護部' && option === 'シフト') {
-        router.push('/schedule/ns');
-      } else if (department === 'リハビリテーション部' && option === '予定表') {
-        router.push('/schedule/riha');
-      } else if (department === '全部署' && option === '意見交流') {
-        router.push('/corporate');
-      } else if (department === '全部署' && option === 'AI Chat') {
-        router.push('/AIchat');
-      }
-    }, 800);
-  };
-// Navigate to corporate
-
-  const options = [
-    { department: '全部署',           option: 'AI Chat', Icon: Activity },
-    { department: '看護部',           option: 'シフト',   Icon: Heart },
-    { department: 'リハビリテーション部', option: '予定表',   Icon: Activity },
-    { department: '全部署',       option: '意見交流',   Icon: Activity }, 
-  ];
-
-  return (
-    <div className="min-h-screen relative overflow-hidden bg-black">
-      {/* 背景の演出はそのまま */}
-
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-         <div className="w-full max-w-4xl">
-          <div
-            className={`backdrop-blur-xl bg-gradient-to-br from-emerald-500/90 via-teal-600/90 to-cyan-700/90
-              border border-emerald-200/50 rounded-3xl p-8 shadow-2xl transform transition-all duration-500
-              ${isAnimating ? 'scale-95 opacity-50' : 'scale-100 opacity-100'}`}
-          >
-            {/* ヘッダー */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/30 rounded-full mb-4 backdrop-blur-sm border border-white/40">
-                <Activity className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-white mb-2">項目選択</h1>
-              <p className="text-white/80">確認した項目を選択してください</p>
-            </div>
-
-            {/* オプション（1→2 列） */}
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-6">
-              {options.map(({ department, option, Icon }) => (
-                <div key={`${department}-${option}`} className="bg-white/20 border border-white/30 backdrop-blur-sm rounded-2xl p-6">  {/* パディング増量 */}
-                  <div className="flex items-center justify-center space-x-3 mb-4">
-                    <Icon className="w-6 h-6 text-white" />
-                    <h3 className="text-white text-lg font-semibold">{department}</h3>
-                  </div>
-                  <button
-                    onClick={() => handleOptionSelect(department, option)}
-                    className={`w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-xl ${
-                      isAnimating ? 'cursor-not-allowed opacity-50' : ''
-                    }`}
-                    disabled={isAnimating}
-                  >
-                    {option}
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* リンクやローディング表示は元コードを踏襲 */}
-          </div>
-
-          <div className="text-center mt-8">
-            <p className="text-white/60 text-sm">© 2025 Koreha Maenaka ga tukutta. www.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// 型定義
+type Option = {
+  id: string;
+  department: string;
+  label: string;
+  description: string;
+  href: string;
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  gradient: string; // Tailwind の from-*/to-* 用
 };
 
-export default DepartmentSelection;
+const OPTIONS: Option[] = [
+  {
+    id: 'all-ai',
+    department: '全部署',
+    label: 'AI Chat',
+    description: 'グループ共通のAIアシスタント',
+    href: '/AIchat',
+    Icon: Bot,
+    gradient: 'from-emerald-500 to-teal-600',
+  },
+  {
+    id: 'nurse-shift',
+    department: '看護部',
+    label: 'シフト',
+    description: '看護師のシフト作成・調整',
+    href: '/schedule/ns',
+    Icon: Heart,
+    gradient: 'from-pink-500 to-rose-600',
+  },
+  {
+    id: 'rehab-plan',
+    department: 'リハビリテーション部',
+    label: '予定表',
+    description: 'リハスタッフの予定・担当管理',
+    href: '/schedule/riha',
+    Icon: Activity,
+    gradient: 'from-cyan-500 to-sky-600',
+  },
+  {
+    id: 'all-corporate',
+    department: '全部署',
+    label: '意見交流',
+    description: '社内の意見交換・アイデア共有',
+    href: '/corporate',
+    Icon: MessageSquare,
+    gradient: 'from-violet-500 to-indigo-600',
+  },
+];
+
+export default function DepartmentSelection() {
+  const router = useRouter();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const selectedLabel = useMemo(
+    () => OPTIONS.find((o) => o.id === selectedId)?.label ?? null,
+    [selectedId]
+  );
+
+  const handleNavigate = (opt: Option) => {
+    if (isPending) return; // 二重押下防止
+    setSelectedId(opt.id);
+    startTransition(() => {
+      router.push(opt.href);
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-black to-black text-white">
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
+        {/* ヘッダー */}
+        <header className="mb-8 sm:mb-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/10 shadow backdrop-blur">
+            <CalendarClock aria-hidden className="w-8 h-8" />
+          </div>
+          <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">項目を選択</h1>
+          <p className="mt-2 text-sm sm:text-base text-white/70">
+            行きたい機能を選ぶとすぐに移動します。
+          </p>
+        </header>
+
+        {/* ステータス（読み上げ用） */}
+        <p className="sr-only" role="status" aria-live="polite">
+          {isPending && selectedLabel ? `${selectedLabel} に移動中…` : '項目を選択してください'}
+        </p>
+
+        {/* オプショングリッド */}
+        <section
+          aria-label="利用できる項目"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
+        >
+          {OPTIONS.map((opt) => {
+            const active = selectedId === opt.id && isPending;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleNavigate(opt)}
+                disabled={isPending}
+                className={[
+                  'group relative w-full overflow-hidden rounded-2xl border text-left',
+                  'border-white/10 bg-white/5 backdrop-blur-sm transition-all',
+                  'hover:-translate-y-[2px] hover:shadow-xl hover:bg-white/10',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400',
+                  'disabled:opacity-70 disabled:cursor-not-allowed',
+                  'p-5 sm:p-6',
+                ].join(' ')}
+                aria-busy={active || undefined}
+                aria-describedby={`${opt.id}-desc`}
+              >
+                {/* アクセントグラデーション */}
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-0 opacity-60 group-hover:opacity-80 transition-opacity bg-gradient-to-r ${opt.gradient}`}
+                />
+                {/* フロストレイヤー */}
+                <div className="relative z-10 flex items-start gap-4">
+                  <div className="shrink-0 rounded-xl bg-black/30 border border-white/10 p-3">
+                    <opt.Icon className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-full bg-black/40 px-2 py-0.5 text-xs border border-white/10">
+                        {opt.department}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 text-lg font-semibold leading-tight">
+                      {opt.label}
+                    </h3>
+                    <p id={`${opt.id}-desc`} className="mt-1 text-sm text-white/80 line-clamp-2">
+                      {opt.description}
+                    </p>
+
+                    {/* ボタン行 */}
+                    <div className="mt-4 flex items-center gap-3">
+                      <span
+                        className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm font-medium transition-all group-hover:translate-x-0.5"
+                        aria-hidden
+                      >
+                        {active ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Users className="w-4 h-4" />
+                        )}
+                        {active ? '移動中…' : '開く'}
+                      </span>
+                      <span className="text-xs text-white/70" aria-hidden>
+                        Enter / Space で決定
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </section>
+
+        {/* フッター */}
+        <footer className="mt-10 sm:mt-14 text-center text-xs text-white/60">
+          © 2025 Koreha Maenaka ga tukutta. www.
+        </footer>
+      </main>
+
+      {/* ユーザーの reduce-motion 設定に追従 */}
+      <style jsx global>{`
+        @media (prefers-reduced-motion: no-preference) {
+          .hover\\:-translate-y-[2px]:hover {
+            transform: translateY(-2px);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
