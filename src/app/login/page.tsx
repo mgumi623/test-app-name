@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, ChangeEvent, MouseEvent } from 'react';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Bot } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +53,7 @@ export default function LoginPage() {
     window.location.href = '/Select';
   };
 
-  /* ---------------------------- Password Reset ----------------------------- */
+  /* ---------------------------- Password Reset ----------------------------- */
   const handlePasswordReset = async () => {
     if (!resetData.newPassword || !resetData.confirmPassword) {
       setResetMessage('全ての項目を入力してください。');
@@ -76,71 +76,67 @@ export default function LoginPage() {
       setResetData({ login_id: '', newPassword: '', confirmPassword: '' });
     }
   };
-    /* --------------------------------- JSX ---------------------------------- */
+
+  /* --------------------------------- JSX ---------------------------------- */
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
-      {/* === Sophisticated background pattern === */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#10b98108_1px,transparent_1px),linear-gradient(to_bottom,#10b98108_1px,transparent_1px)] bg-[size:6rem_4rem]" />
-        {/* Gradient orbs */}
-        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-emerald-200/20 to-green-200/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-gradient-to-l from-teal-200/20 to-cyan-200/20 rounded-full blur-3xl" />
-      </div>
+    <>
+      {/* AIChatスタイルのグローバルCSS */}
+      <style>{`
+        @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out }
+        .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards }
+        ::-webkit-scrollbar { width: 8px }
+        ::-webkit-scrollbar-track { background: #f1f5f9 }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8 }
+      `}</style>
 
-      {/* === Premium Login Card === */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-lg">
-          <Card className="backdrop-blur-2xl bg-white/95 border-0 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] transition-all duration-500 rounded-3xl overflow-hidden">
-            {/* Subtle top accent */}
-            <div className="h-1 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500" />
-            
-            <CardHeader className="text-center pt-12 pb-8 px-10">
-              <div className="mx-auto mb-6 relative">
-                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-lg flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
-                  <Lock className="w-10 h-10 text-white" />
-                </div>
-                <div className="absolute -inset-2 bg-gradient-to-br from-emerald-500/20 to-green-600/20 rounded-3xl blur-xl -z-10" />
-              </div>
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">ログイン</CardTitle>
-              <CardDescription className="text-slate-600 text-base font-medium">IDとパスワードでサインインしてください</CardDescription>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md animate-fade-in-up">
+          {/* ヘッダー部分 - AIChatスタイル */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-200 mb-4">
+              <Bot className="w-8 h-8 text-gray-600" />
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">ログイン</h1>
+            <p className="text-gray-600">病院管理システムにサインインしてください</p>
+          </div>
+
+          {/* ログインフォーム */}
+          <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-medium text-gray-900">アカウント情報を入力</CardTitle>
             </CardHeader>
-            <CardContent className="px-10 pb-10">
-
-              <div className="space-y-8">
-                {/* --- ID Field --- */}
-                <div className="relative group">
-                  <label className="absolute -top-2 left-3 px-2 bg-white text-sm font-semibold text-slate-700 transition-colors group-focus-within:text-emerald-600">
-                    ユーザーID
-                  </label>
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-all duration-300" />
-                  </div>
+            <CardContent className="space-y-4">
+              {/* ユーザーID */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">ユーザーID</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="text"
                     name="login_id"
                     value={formData.login_id}
                     onChange={handleInputChange}
-                    className="h-14 pl-12 pr-4 bg-slate-50/50 border-slate-200 hover:border-slate-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-slate-800 placeholder-slate-400 rounded-xl transition-all duration-300"
+                    className="pl-10 h-12 border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-gray-300"
                     placeholder="IDを入力してください"
                     required
                   />
                 </div>
+              </div>
 
-                {/* --- Password Field --- */}
-                <div className="relative group">
-                  <label className="absolute -top-2 left-3 px-2 bg-white text-sm font-semibold text-slate-700 transition-colors group-focus-within:text-emerald-600">
-                    パスワード
-                  </label>
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-all duration-300" />
-                  </div>
+              {/* パスワード */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">パスワード</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="h-14 pl-12 pr-14 bg-slate-50/50 border-slate-200 hover:border-slate-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-slate-800 placeholder-slate-400 rounded-xl transition-all duration-300"
+                    className="pl-10 pr-12 h-12 border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-gray-300"
                     placeholder="パスワードを入力してください"
                     required
                   />
@@ -149,47 +145,46 @@ export default function LoginPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 text-slate-400 hover:text-slate-600 transition-all duration-200 hover:bg-transparent"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+              </div>
 
-                {/* --- Login Button --- */}
+              {/* ログインボタン */}
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg transition-colors"
+              >
+                サインイン
+              </Button>
+
+              {/* パスワードリセットリンク */}
+              <div className="text-center">
                 <Button
                   type="button"
-                  onClick={handleSubmit}
-                  className="w-full h-14 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-[1.02] focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 rounded-xl"
+                  variant="ghost"
+                  onClick={() => setShowResetForm(!showResetForm)}
+                  className="text-gray-600 hover:text-gray-900 text-sm font-medium p-0 h-auto"
                 >
-                  サインイン
+                  パスワードをお忘れですか？
                 </Button>
+              </div>
 
-                {/* --- Forgot Password Link --- */}
-                <div className="text-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setShowResetForm(!showResetForm)}
-                    className="text-slate-600 hover:text-emerald-600 font-medium px-0 h-auto transition-colors duration-200 hover:bg-transparent"
-                  >
-                    パスワードをお忘れですか？
-                  </Button>
-                </div>
-
-                {/* --- Password Reset Form --- */}
-                {showResetForm && (
-                  <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl border border-slate-200/60 shadow-inner">
-                    <div className="text-center mb-4">
-                      <h3 className="text-lg font-semibold text-slate-800 mb-2">パスワードリセット</h3>
-                      <p className="text-sm text-slate-600">新しいパスワードを設定してください</p>
-                    </div>
+              {/* パスワードリセットフォーム */}
+              {showResetForm && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg border animate-fade-in-up">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">パスワードリセット</h3>
+                  <div className="space-y-3">
                     <Input
                       type="text"
                       name="login_id"
                       value={resetData.login_id}
                       onChange={handleResetInputChange}
                       placeholder="ユーザーID"
-                      className="h-12 bg-white/70 border-slate-200 hover:border-slate-300 focus:border-emerald-400 text-slate-800 placeholder-slate-400 rounded-xl"
+                      className="h-10 border-gray-200 focus:border-gray-300"
                     />
                     <Input
                       type="password"
@@ -197,7 +192,7 @@ export default function LoginPage() {
                       value={resetData.newPassword}
                       onChange={handleResetInputChange}
                       placeholder="新しいパスワード"
-                      className="h-12 bg-white/70 border-slate-200 hover:border-slate-300 focus:border-emerald-400 text-slate-800 placeholder-slate-400 rounded-xl"
+                      className="h-10 border-gray-200 focus:border-gray-300"
                     />
                     <Input
                       type="password"
@@ -205,32 +200,32 @@ export default function LoginPage() {
                       value={resetData.confirmPassword}
                       onChange={handleResetInputChange}
                       placeholder="パスワード確認"
-                      className="h-12 bg-white/70 border-slate-200 hover:border-slate-300 focus:border-emerald-400 text-slate-800 placeholder-slate-400 rounded-xl"
+                      className="h-10 border-gray-200 focus:border-gray-300"
                     />
                     <Button
                       type="button"
                       onClick={handlePasswordReset}
-                      className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-lg"
+                      className="w-full h-10 bg-gray-700 hover:bg-gray-800 text-white text-sm rounded-md"
                     >
                       パスワードを更新
                     </Button>
                     {resetMessage && (
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                        <p className="text-sm text-emerald-700 text-center font-medium">{resetMessage}</p>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <p className="text-sm text-blue-700">{resetMessage}</p>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* --- Elegant Footer --- */}
-          <div className="text-center mt-12">
-            <p className="text-slate-500 text-sm font-medium">© 2025 Koreha Maenaka ga Tukutta Yo.</p>
+          {/* フッター */}
+          <div className="text-center mt-8">
+            <p className="text-xs text-gray-500">© 2025 Koreha Maenaka ga Tukutta Yo.</p>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
