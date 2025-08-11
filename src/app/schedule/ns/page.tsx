@@ -304,7 +304,7 @@ const ShiftManagementTool = () => {
       const helperOrder = ['helper_early', 'helper_day', 'helper_day', 'helper_night'] as const;
       for (const kind of helperOrder) {
         let idxRef = kind === 'helper_early' ? he : (kind === 'helper_day' ? hd : hn);
-        let setRef = (v: number) => {
+        const setRef = (v: number) => {
           if (kind === 'helper_early') he = v; else if (kind === 'helper_day') hd = v; else hn = v;
         };
         let tried = 0;
@@ -576,7 +576,7 @@ const ShiftManagementTool = () => {
                       <div className={`mx-auto w-fit px-2 py-1 rounded-lg text-xs border flex items-center gap-1 ${badge}`} title="必要人数との充足状況">
                         <Icon className="w-3.5 h-3.5" />
                         <span>
-                          {Object.entries(sum).map(([k, v]) => `${(SHIFT_TYPES as any)[k].name}:${v}`).join(' ')}
+                          {Object.entries(sum).map(([k, v]) => `${SHIFT_TYPES[k as keyof typeof SHIFT_TYPES].name}:${v}`).join(' ')}
                         </span>
                       </div>
                     </th>
@@ -646,7 +646,7 @@ const ShiftManagementTool = () => {
                           </div>
                         ) : isAdmin ? (
                           <button
-                            onClick={(e) => openMenu(e as any, n.id, d, 'nurse')}
+                            onClick={(e) => openMenu(e as React.MouseEvent<HTMLButtonElement>, n.id, d, 'nurse')}
                             className="w-full h-8 bg-gray-100 hover:bg-blue-100 rounded-lg transition-colors duration-200"
                             title="クリックで追加"
                           >
@@ -704,7 +704,7 @@ const ShiftManagementTool = () => {
                           </div>
                         ) : isAdmin ? (
                           <button
-                            onClick={(e) => openMenu(e as any, h.id, d, 'helper')}
+                            onClick={(e) => openMenu(e as React.MouseEvent<HTMLButtonElement>, h.id, d, 'helper')}
                             className="w-full h-8 bg-gray-100 hover:bg-green-100 rounded-lg transition-colors duration-200"
                             title="クリックで追加"
                           >
