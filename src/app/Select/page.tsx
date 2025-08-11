@@ -1,75 +1,50 @@
 'use client';
 import React, { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { OPTIONS } from './data';
+import { Option } from './types';
+import Header from './components/Header';
+import OptionCard from './components/OptionCard';
+import HospitalNews from './components/HospitalNews';
 import {
-  Activity,
-  Heart,
-  MessageSquare,
-  Bot,
-  Users,
-  CalendarClock,
-  Loader2,
-} from 'lucide-react';
-
-// 型定義
-type Option = {
-  id: string;
-  department: string;
-  label: string;
-  description: string;
-  href: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  gradient: string; // Tailwind の from-*/to-* 用
-};
-
-const OPTIONS: Option[] = [
-  {
-    id: 'all-ai',
-    department: '全部署',
-    label: 'AI Chat',
-    description: 'グループ共通のAIアシスタント',
-    href: '/AIchat',
-    Icon: Bot,
-    gradient: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'nurse-shift',
-    department: '看護部',
-    label: 'シフト',
-    description: '看護師のシフト作成・調整',
-    href: '/schedule/ns',
-    Icon: Heart,
-    gradient: 'from-pink-500 to-rose-600',
-  },
-  {
-    id: 'rehab-plan',
-    department: 'リハビリテーション部',
-    label: '予定表',
-    description: 'リハスタッフの予定・担当管理',
-    href: '/schedule/riha',
-    Icon: Activity,
-    gradient: 'from-cyan-500 to-sky-600',
-  },
-  {
-    id: 'all-corporate',
-    department: '全部署',
-    label: '意見交流',
-    description: '社内の意見交換・アイデア共有',
-    href: '/corporate',
-    Icon: MessageSquare,
-    gradient: 'from-violet-500 to-indigo-600',
-  },
-];
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  CarouselApi,
+} from '@/components/ui/carousel';
+import { useEffect } from 'react';
 
 export default function DepartmentSelection() {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+  const [currentViewOption, setCurrentViewOption] = useState<Option | null>(OPTIONS[0]);
 
   const selectedLabel = useMemo(
     () => OPTIONS.find((o) => o.id === selectedId)?.label ?? null,
     [selectedId]
   );
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap() + 1);
+
+    api.on("select", () => {
+      const newIndex = api.selectedScrollSnap();
+      setCurrent(newIndex + 1);
+      // カルーセルの選択と表示を同期
+      setCurrentViewOption(OPTIONS[Math.min(newIndex, OPTIONS.length - 1)]);
+    });
+  }, [api]);
 
   const handleNavigate = (opt: Option) => {
     if (isPending) return; // 二重押下防止
@@ -80,97 +55,88 @@ export default function DepartmentSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-black to-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground">
       <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
-        {/* ヘッダー */}
-        <header className="mb-8 sm:mb-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/10 shadow backdrop-blur">
-            <CalendarClock aria-hidden className="w-8 h-8" />
-          </div>
-          <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">項目を選択</h1>
-          <p className="mt-2 text-sm sm:text-base text-white/70">
-            行きたい機能を選ぶとすぐに移動します。
-          </p>
-        </header>
+        <Header />
 
-        {/* ステータス（読み上げ用） */}
         <p className="sr-only" role="status" aria-live="polite">
           {isPending && selectedLabel ? `${selectedLabel} に移動中…` : '項目を選択してください'}
         </p>
 
-        {/* オプショングリッド */}
-        <section
-          aria-label="利用できる項目"
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-        >
-          {OPTIONS.map((opt) => {
-            const active = selectedId === opt.id && isPending;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => handleNavigate(opt)}
-                disabled={isPending}
-                className={[
-                  'group relative w-full overflow-hidden rounded-2xl border text-left',
-                  'border-white/10 bg-white/5 backdrop-blur-sm transition-all',
-                  'hover:-translate-y-[2px] hover:shadow-xl hover:bg-white/10',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400',
-                  'disabled:opacity-70 disabled:cursor-not-allowed',
-                  'p-5 sm:p-6',
-                ].join(' ')}
-                aria-busy={active || undefined}
-                aria-describedby={`${opt.id}-desc`}
-              >
-                {/* アクセントグラデーション */}
-                <div
-                  aria-hidden
-                  className={`pointer-events-none absolute inset-0 opacity-60 group-hover:opacity-80 transition-opacity bg-gradient-to-r ${opt.gradient}`}
-                />
-                {/* フロストレイヤー */}
-                <div className="relative z-10 flex items-start gap-4">
-                  <div className="shrink-0 rounded-xl bg-black/30 border border-white/10 p-3">
-                    <opt.Icon className="w-6 h-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center rounded-full bg-black/40 px-2 py-0.5 text-xs border border-white/10">
-                        {opt.department}
-                      </span>
+        <section aria-label="利用できる項目" className="relative">
+          <Carousel
+            setApi={setApi}
+            opts={{
+              align: "center",
+              loop: true,
+            }}
+            className="w-full max-w-4xl mx-auto"
+          >
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {OPTIONS.map((opt) => {
+                const active = selectedId === opt.id && isPending;
+                return (
+                  <CarouselItem key={opt.id} className="pl-2 md:pl-4 md:basis-1/2">
+                    <div className="p-1">
+                      <OptionCard
+                        option={opt}
+                        isActive={active}
+                        isPending={isPending}
+                        onNavigate={handleNavigate}
+                      />
                     </div>
-                    <h3 className="mt-2 text-lg font-semibold leading-tight">
-                      {opt.label}
-                    </h3>
-                    <p id={`${opt.id}-desc`} className="mt-1 text-sm text-white/80 line-clamp-2">
-                      {opt.description}
-                    </p>
+                  </CarouselItem>
+                );
+              })}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+          </Carousel>
 
-                    {/* ボタン行 */}
-                    <div className="mt-4 flex items-center gap-3">
-                      <span
-                        className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm font-medium transition-all group-hover:translate-x-0.5"
-                        aria-hidden
-                      >
-                        {active ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Users className="w-4 h-4" />
-                        )}
-                        {active ? '移動中…' : '開く'}
-                      </span>
-                      <span className="text-xs text-white/70" aria-hidden>
-                        Enter / Space で決定
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          {/* 中央表示ページ名 */}
+          <div className="text-center mt-6">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/80 backdrop-blur-sm border border-border rounded-2xl shadow-sm">
+              <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${currentViewOption?.gradient} flex items-center justify-center`}>
+                {currentViewOption && <currentViewOption.Icon className="w-4 h-4 text-white" />}
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {currentViewOption?.label}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {currentViewOption?.department}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ドットインジケーター */}
+          <div className="flex justify-center mt-4 gap-2">
+            {Array.from({ length: count }, (_, index) => (
+              <button
+                key={index}
+                className={`h-2 w-2 rounded-full transition-all ${
+                  index + 1 === current 
+                    ? "bg-primary w-8" 
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+                onClick={() => api?.scrollTo(index)}
+                aria-label={`${index + 1}番目の項目を表示`}
+              />
+            ))}
+          </div>
+
+          {/* モバイル用の指示テキスト */}
+          <div className="md:hidden mt-4 text-center text-sm text-muted-foreground">
+            スワイプして他の項目を見る
+          </div>
         </section>
 
+        {/* 病院ニュース */}
+        <HospitalNews />
+
         {/* フッター */}
-        <footer className="mt-10 sm:mt-14 text-center text-xs text-white/60">
+        <footer className="mt-10 sm:mt-14 text-center text-xs text-muted-foreground">
           © 2025 Koreha Maenaka ga tukutta. www.
         </footer>
       </main>

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(mkdir:*)",
+      "Bash(xcopy:*)",
+      "Bash(copy \"src\\src\\components\\ui\\*\" \"src\\components\\ui\"\")",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)"
+    ],
+    "deny": []
+  }
+}

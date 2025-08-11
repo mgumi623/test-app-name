@@ -2,6 +2,10 @@
 import React, { useState, ChangeEvent, MouseEvent } from 'react';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function LoginPage() {
   /* ----------------------------- Supabase client ---------------------------- */
@@ -75,137 +79,156 @@ export default function LoginPage() {
   };
     /* --------------------------------- JSX ---------------------------------- */
   return (
-    <div className="min-h-screen relative overflow-hidden bg-black">
-      {/* === Animated background === */}
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
+      {/* === Sophisticated background pattern === */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" />
-        <div
-          className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gray-400/10 rounded-full blur-2xl animate-pulse"
-          style={{ animationDuration: '8s' }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-white/8 rounded-full blur-2xl animate-pulse"
-          style={{ animationDelay: '3s' }}
-        />
+        {/* Grid pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#10b98108_1px,transparent_1px),linear-gradient(to_bottom,#10b98108_1px,transparent_1px)] bg-[size:6rem_4rem]" />
+        {/* Gradient orbs */}
+        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-emerald-200/20 to-green-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-gradient-to-l from-teal-200/20 to-cyan-200/20 rounded-full blur-3xl" />
       </div>
 
-      {/* === Card === */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="backdrop-blur-xl bg-gradient-to-br from-gray-900/95 via-black/90 to-gray-800/95 border border-gray-700/50 rounded-xl p-8 shadow-2xl hover:scale-[1.02] hover:shadow-3xl transition-all duration-300">
-            {/* ---- Header ---- */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-lg mb-4 border border-white/20 backdrop-blur-sm">
-                <Lock className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-white mb-2">ログイン</h1>
-              <p className="text-gray-400">IDとパスワードでサインインしてください</p>
-            </div>
-
-            {/* ---- Form ---- */}
-            <div className="space-y-6">
-              {/* --- ID --- */}
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-500 group-focus-within:text-white transition-colors duration-200" />
+      {/* === Premium Login Card === */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-lg">
+          <Card className="backdrop-blur-2xl bg-white/95 border-0 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] transition-all duration-500 rounded-3xl overflow-hidden">
+            {/* Subtle top accent */}
+            <div className="h-1 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500" />
+            
+            <CardHeader className="text-center pt-12 pb-8 px-10">
+              <div className="mx-auto mb-6 relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-lg flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+                  <Lock className="w-10 h-10 text-white" />
                 </div>
-                <input
-                  type="text"
-                  name="login_id"
-                  value={formData.login_id}
-                  onChange={handleInputChange}
-                  className="w-full pl-12 pr-4 py-4 bg-white/10 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all duration-300 backdrop-blur-sm"
-                  placeholder="ユーザーID"
-                  required
-                />
+                <div className="absolute -inset-2 bg-gradient-to-br from-emerald-500/20 to-green-600/20 rounded-3xl blur-xl -z-10" />
               </div>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">ログイン</CardTitle>
+              <CardDescription className="text-slate-600 text-base font-medium">IDとパスワードでサインインしてください</CardDescription>
+            </CardHeader>
+            <CardContent className="px-10 pb-10">
 
-              {/* --- Password --- */}
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-white transition-colors duration-200" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full pl-12 pr-12 py-4 bg-white/10 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all duration-300 backdrop-blur-sm"
-                  placeholder="パスワード"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-white transition-colors duration-200"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-
-              {/* --- Login button --- */}
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="w-full py-4 bg-white text-black font-semibold rounded-lg transform transition-all duration-300 hover:scale-[1.02] hover:bg-gray-100 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black"
-              >
-                ログイン
-              </button>
-
-              {/* --- Toggle reset form --- */}
-              <button
-                type="button"
-                onClick={() => setShowResetForm(!showResetForm)}
-                className="text-sm w-full py-4 bg-transparent text-rose-300 font-semibold rounded-lg transform transition-all duration-300 hover:scale-[1.02] hover:text-rose-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black"
-              >
-                パスワードを忘れた方はこちら
-              </button>
-
-              {/* --- Reset form --- */}
-              {showResetForm && (
-                <div className="space-y-4 mt-6 bg-white/5 p-4 rounded-lg">
-                  <input
+              <div className="space-y-8">
+                {/* --- ID Field --- */}
+                <div className="relative group">
+                  <label className="absolute -top-2 left-3 px-2 bg-white text-sm font-semibold text-slate-700 transition-colors group-focus-within:text-emerald-600">
+                    ユーザーID
+                  </label>
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-all duration-300" />
+                  </div>
+                  <Input
                     type="text"
                     name="login_id"
-                    value={resetData.login_id}
-                    onChange={handleResetInputChange}
-                    placeholder="ユーザーID"
-                    className="w-full px-4 py-2 rounded bg-black/20 text-white placeholder-gray-400"
+                    value={formData.login_id}
+                    onChange={handleInputChange}
+                    className="h-14 pl-12 pr-4 bg-slate-50/50 border-slate-200 hover:border-slate-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-slate-800 placeholder-slate-400 rounded-xl transition-all duration-300"
+                    placeholder="IDを入力してください"
+                    required
                   />
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={resetData.newPassword}
-                    onChange={handleResetInputChange}
-                    placeholder="新しいパスワード"
-                    className="w-full px-4 py-2 rounded bg-black/20 text-white placeholder-gray-400"
-                  />
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={resetData.confirmPassword}
-                    onChange={handleResetInputChange}
-                    placeholder="パスワード再入力"
-                    className="w-full px-4 py-2 rounded bg-black/20 text-white placeholder-gray-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={handlePasswordReset}
-                    className="w-full py-2 bg-white text-black font-semibold rounded hover:bg-gray-200"
-                  >
-                    パスワードを変更する
-                  </button>
-                  {resetMessage && (
-                    <p className="text-sm text-rose-400 text-center">{resetMessage}</p>
-                  )}
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* --- Footer --- */}
-          <div className="text-center mt-8">
-            <p className="text-gray-500 text-sm">© 2025 Koreha Maenaka ga Tukutta Yo.</p>
+                {/* --- Password Field --- */}
+                <div className="relative group">
+                  <label className="absolute -top-2 left-3 px-2 bg-white text-sm font-semibold text-slate-700 transition-colors group-focus-within:text-emerald-600">
+                    パスワード
+                  </label>
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-all duration-300" />
+                  </div>
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="h-14 pl-12 pr-14 bg-slate-50/50 border-slate-200 hover:border-slate-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-slate-800 placeholder-slate-400 rounded-xl transition-all duration-300"
+                    placeholder="パスワードを入力してください"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 text-slate-400 hover:text-slate-600 transition-all duration-200 hover:bg-transparent"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </Button>
+                </div>
+
+                {/* --- Login Button --- */}
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="w-full h-14 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-[1.02] focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 rounded-xl"
+                >
+                  サインイン
+                </Button>
+
+                {/* --- Forgot Password Link --- */}
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowResetForm(!showResetForm)}
+                    className="text-slate-600 hover:text-emerald-600 font-medium px-0 h-auto transition-colors duration-200 hover:bg-transparent"
+                  >
+                    パスワードをお忘れですか？
+                  </Button>
+                </div>
+
+                {/* --- Password Reset Form --- */}
+                {showResetForm && (
+                  <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl border border-slate-200/60 shadow-inner">
+                    <div className="text-center mb-4">
+                      <h3 className="text-lg font-semibold text-slate-800 mb-2">パスワードリセット</h3>
+                      <p className="text-sm text-slate-600">新しいパスワードを設定してください</p>
+                    </div>
+                    <Input
+                      type="text"
+                      name="login_id"
+                      value={resetData.login_id}
+                      onChange={handleResetInputChange}
+                      placeholder="ユーザーID"
+                      className="h-12 bg-white/70 border-slate-200 hover:border-slate-300 focus:border-emerald-400 text-slate-800 placeholder-slate-400 rounded-xl"
+                    />
+                    <Input
+                      type="password"
+                      name="newPassword"
+                      value={resetData.newPassword}
+                      onChange={handleResetInputChange}
+                      placeholder="新しいパスワード"
+                      className="h-12 bg-white/70 border-slate-200 hover:border-slate-300 focus:border-emerald-400 text-slate-800 placeholder-slate-400 rounded-xl"
+                    />
+                    <Input
+                      type="password"
+                      name="confirmPassword"
+                      value={resetData.confirmPassword}
+                      onChange={handleResetInputChange}
+                      placeholder="パスワード確認"
+                      className="h-12 bg-white/70 border-slate-200 hover:border-slate-300 focus:border-emerald-400 text-slate-800 placeholder-slate-400 rounded-xl"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handlePasswordReset}
+                      className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-lg"
+                    >
+                      パスワードを更新
+                    </Button>
+                    {resetMessage && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                        <p className="text-sm text-emerald-700 text-center font-medium">{resetMessage}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* --- Elegant Footer --- */}
+          <div className="text-center mt-12">
+            <p className="text-slate-500 text-sm font-medium">© 2025 Koreha Maenaka ga Tukutta Yo.</p>
           </div>
         </div>
       </div>
