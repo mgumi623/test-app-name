@@ -1,4 +1,17 @@
 import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// 分析用のサービスロールクライアント（RLS回避）
+const analyticsSupabase = typeof window === 'undefined' ? supabase : createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export interface AnalyticsSession {
   id?: string;
@@ -163,7 +176,7 @@ class AnalyticsService {
       console.log('📋 Final session data:', sessionData);
 
       console.log('🔄 Inserting session data...');
-      const { data: insertResult, error } = await supabase
+      const { data: insertResult, error } = await analyticsSupabase
         .from('analytics_sessions')
         .insert([sessionData])
         .select();
@@ -294,7 +307,7 @@ class AnalyticsService {
           ((userData.user as any).raw_user_meta_data?.permission as string) || 'unknown';
       }
 
-      const { error: dbError } = await supabase
+      const { error: dbError } = await analyticsSupabase
         .from('analytics_errors')
         .insert([errorData]);
 
@@ -310,30 +323,34 @@ class AnalyticsService {
     try {
       console.log('🎯 Starting event tracking for:', event.event_type);
       
-      // まず認証状態を確認
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      
-      if (authError) {
-        console.warn('⚠️ Auth error during event tracking:', authError);
-        // 認証エラーがあってもイベントトラッキングは続行
-      }
-      
-      if (userData.user) {
-        event.user_id = userData.user.id;
-        const permission = 
-          userData.user.user_metadata?.permission ||
-          (userData.user as any).raw_user_meta_data?.permission ||
-          'unknown';
-        event.user_permission = permission as string;
+      // 認証状態を確認（エラーがあっても続行）
+      try {
+        const { data: userData, error: authError } = await supabase.auth.getUser();
         
-        console.log('👤 User data for event:', {
-          userId: userData.user.id,
-          permission,
-          email: userData.user.email
-        });
-      } else {
-        console.log('👤 Anonymous event tracking');
-        event.user_permission = 'anonymous';
+        if (authError) {
+          console.warn('⚠️ Auth error during event tracking:', authError);
+          // 認証エラーでもイベント追跡は続行
+          event.user_permission = 'unauthenticated';
+        } else if (userData.user) {
+          event.user_id = userData.user.id;
+          const permission = 
+            userData.user.user_metadata?.permission ||
+            (userData.user as any).raw_user_meta_data?.permission ||
+            'unknown';
+          event.user_permission = permission as string;
+          
+          console.log('👤 User data for event:', {
+            userId: userData.user.id,
+            permission,
+            email: userData.user.email
+          });
+        } else {
+          console.log('👤 Anonymous event tracking');
+          event.user_permission = 'anonymous';
+        }
+      } catch (authException) {
+        console.warn('⚠️ Auth exception during event tracking:', authException);
+        event.user_permission = 'auth_failed';
       }
       
       // イベントデータの最終検証
@@ -350,8 +367,8 @@ class AnalyticsService {
       
       console.log('📊 Final event data to insert:', finalEvent);
       
-      // データベースに挿入
-      const { data: result, error } = await supabase
+      // データベースに挿入（RLS回避のため専用クライアント使用）
+      const { data: result, error } = await analyticsSupabase
         .from('analytics_events')
         .insert([finalEvent])
         .select('id');
@@ -411,7 +428,7 @@ class AnalyticsService {
 
   private async updateSessionPageViews() {
     try {
-      const { error } = await supabase
+      const { error } = await analyticsSupabase
         .from('analytics_sessions')
         .update({ page_views: this.pageViews })
         .eq('session_id', this.currentSessionId);
@@ -429,7 +446,7 @@ class AnalyticsService {
       const endTime = new Date();
       const duration = Math.floor((endTime.getTime() - this.sessionStartTime.getTime()) / 1000);
 
-      const { error } = await supabase
+      const { error } = await analyticsSupabase
         .from('analytics_sessions')
         .update({
           end_time: endTime.toISOString(),
