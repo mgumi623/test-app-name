@@ -1,8 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+// シンプルなチャート代替コンポーネント
+const SimpleChart = ({ data, type }: { data: any[]; type: string }) => (
+  <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+    <div className="text-center">
+      <div className="text-4xl mb-2">📊</div>
+      <p className="text-gray-600">Chart ({type})</p>
+      <p className="text-sm text-gray-500">{data?.length || 0} data points</p>
+    </div>
+  </div>
+);
+import { Calendar, Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { analyticsService } from '../../../lib/analyticsService';
@@ -95,7 +106,7 @@ export default function AnalyticsDashboard() {
       }, {} as Record<string, number>);
 
     const topPages = Object.entries(pageViewCounts)
-      .map(([path, views]) => ({ path, views }))
+      .map(([path, views]) => ({ path, views: Number(views) }))
       .sort((a, b) => b.views - a.views)
       .slice(0, 5);
 
@@ -111,7 +122,7 @@ export default function AnalyticsDashboard() {
     const topPagesByPermission = Object.entries(pagePermissionCounts)
       .map(([key, views]) => {
         const [path, permission] = key.split('|||');
-        return { path: path || '', permission: permission || '', views };
+        return { path: path || '', permission: permission || '', views: Number(views) };
       })
       .sort((a, b) => b.views - a.views)
       .slice(0, 10);
@@ -124,7 +135,7 @@ export default function AnalyticsDashboard() {
     }, {} as Record<string, number>);
 
     const deviceBreakdown = Object.entries(deviceCounts)
-      .map(([device, count]) => ({ device, count }));
+      .map(([device, count]) => ({ device, count: Number(count) }));
 
     // Daily activity
     const dailyActivity: { date: string; sessions: number; pageViews: number }[] = [];
@@ -165,7 +176,7 @@ export default function AnalyticsDashboard() {
     }, {} as Record<string, number>);
 
     const errorTypes = Object.entries(errorTypeCounts)
-      .map(([type, count]) => ({ type, count }))
+      .map(([type, count]) => ({ type, count: Number(count) }))
       .sort((a, b) => b.count - a.count);
 
     // Permission breakdown
@@ -176,7 +187,7 @@ export default function AnalyticsDashboard() {
     }, {} as Record<string, number>);
 
     const permissionBreakdown = Object.entries(permissionCounts)
-      .map(([permission, count]) => ({ permission, count }));
+      .map(([permission, count]) => ({ permission, count: Number(count) }));
 
     // Permission-based feature usage
     const permissionFeatureUsage = recentEvents
@@ -187,7 +198,9 @@ export default function AnalyticsDashboard() {
           ? (e.page_path || 'unknown')
           : (e.event_data?.feature_name || 'unknown');
         
-        const existing = acc.find(item => item.permission === permission && item.feature === feature);
+        const existing = acc.find((item: { permission: string; feature: string; count: number }) => 
+          item.permission === permission && item.feature === feature
+        );
         if (existing) {
           existing.count++;
         } else {
@@ -195,7 +208,7 @@ export default function AnalyticsDashboard() {
         }
         return acc;
       }, [] as { permission: string; feature: string; count: number }[])
-      .sort((a, b) => b.count - a.count);
+      .sort((a: { permission: string; feature: string; count: number }, b: { permission: string; feature: string; count: number }) => b.count - a.count);
 
     return {
       totalSessions,
@@ -313,40 +326,13 @@ export default function AnalyticsDashboard() {
           {/* Daily Activity Chart */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">日別アクティビティ</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats?.dailyActivity}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="sessions" stroke="#3B82F6" name="セッション" />
-                <Line type="monotone" dataKey="pageViews" stroke="#10B981" name="ページビュー" />
-              </LineChart>
-            </ResponsiveContainer>
+            <SimpleChart data={stats?.dailyActivity || []} type="line" />
           </Card>
 
           {/* Device Breakdown */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">デバイス別利用状況</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats?.deviceBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ device, percent }) => `${device} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {stats?.deviceBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <SimpleChart data={stats?.deviceBreakdown || []} type="pie" />
           </Card>
         </div>
 
@@ -355,25 +341,7 @@ export default function AnalyticsDashboard() {
           {/* Permission Breakdown */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">役職別利用状況</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats?.permissionBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ permission, percent }) => `${permission} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {stats?.permissionBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <SimpleChart data={stats?.permissionBreakdown || []} type="pie" />
           </Card>
 
           {/* Permission Feature Usage */}

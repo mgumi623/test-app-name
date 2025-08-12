@@ -70,7 +70,7 @@ class AnalyticsService {
         start_time: this.sessionStartTime.toISOString(),
         device_type: this.getDeviceType(),
         user_agent: navigator.userAgent,
-        referrer: document.referrer || null,
+        referrer: document.referrer || undefined,
         page_views: 0,
       };
 
@@ -80,14 +80,14 @@ class AnalyticsService {
         // ユーザーのpermission情報を取得（複数の場所をチェック）
         const permission = 
           userData.user.user_metadata?.permission ||
-          userData.user.raw_user_meta_data?.permission ||
+          (userData.user as any).raw_user_meta_data?.permission ||
           'unknown';
         sessionData.user_permission = permission as string;
         
         // デバッグログ
         console.log('Analytics Session - User permission:', permission);
         console.log('Analytics Session - User metadata:', userData.user.user_metadata);
-        console.log('Analytics Session - Raw user meta data:', userData.user.raw_user_meta_data);
+        console.log('Analytics Session - Raw user meta data:', (userData.user as any).raw_user_meta_data);
       }
 
       const { error } = await supabase
@@ -169,7 +169,8 @@ class AnalyticsService {
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
         errorData.user_id = userData.user.id;
-        errorData.user_permission = (userData.user.user_metadata?.permission as string) || 'unknown';
+        errorData.user_permission = (userData.user.user_metadata?.permission as string) || 
+          ((userData.user as any).raw_user_meta_data?.permission as string) || 'unknown';
       }
 
       const { error: dbError } = await supabase
@@ -191,7 +192,7 @@ class AnalyticsService {
         event.user_id = userData.user.id;
         const permission = 
           userData.user.user_metadata?.permission ||
-          userData.user.raw_user_meta_data?.permission ||
+          (userData.user as any).raw_user_meta_data?.permission ||
           'unknown';
         event.user_permission = permission as string;
         
