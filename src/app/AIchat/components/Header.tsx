@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) {
   return (
-    <div className="z-10 w-full backdrop-blur-sm bg-white/80 border-b border-gray-200 p-4 sm:p-6">
+    <div className="z-10 w-full backdrop-blur-sm bg-white/60 border-b border-gray-200 p-4 sm:p-6">
       <div className="relative flex items-center justify-between animate-fade-in">
         <Button
           variant="ghost"

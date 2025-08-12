@@ -7,8 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface MessageListProps {
   messages: ChatMessage[];
   isTyping: boolean;
-  copiedMessageId: number | null;
-  onCopyMessage: (text: string, messageId: number) => void;
+  copiedMessageId: string | null;
+  onCopyMessage: (text: string, messageId: string) => void;
 }
 
 export default function MessageList({ 

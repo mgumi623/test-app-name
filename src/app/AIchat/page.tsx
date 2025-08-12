@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useChatSessions } from './hooks/useChatSessions';
 import { useClipboard } from './hooks/useClipboard';
+import { usePageTracking, useAnalytics } from '../../hooks/useAnalytics';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import MessageList from './components/MessageList';
@@ -15,6 +16,7 @@ const AIChatApp: React.FC = () => {
     currentChatId,
     messages,
     isTyping,
+    isLoading,
     selectChat,
     createNewChat,
     deleteChat,
@@ -22,19 +24,25 @@ const AIChatApp: React.FC = () => {
   } = useChatSessions();
 
   const { copiedMessageId, copyToClipboard } = useClipboard();
+  const { trackFeatureUse } = useAnalytics();
   
   const [inputText, setInputText] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
+  // ページビュー追跡
+  usePageTracking();
 
-  const handleSelectChat = (id: number) => {
+
+  const handleSelectChat = (id: string) => {
     selectChat(id);
     setIsSidebarOpen(false);
+    trackFeatureUse('chat_select');
   };
 
   const handleCreateNewChat = () => {
     createNewChat();
     setIsSidebarOpen(false);
+    trackFeatureUse('create_new_chat');
   };
 
   const handleSendMessage = async () => {
@@ -52,6 +60,20 @@ const AIChatApp: React.FC = () => {
       await handleSendMessage();
     }
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <style>{globalStyles}</style>
+        <div className="flex min-h-screen bg-gray-50 items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">チャット履歴を読み込み中...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

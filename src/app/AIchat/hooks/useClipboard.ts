@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 export const useClipboard = () => {
-  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const copyToClipboard = async (text: string, messageId: number) => {
+  const copyToClipboard = async (text: string, messageId: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedMessageId(messageId);

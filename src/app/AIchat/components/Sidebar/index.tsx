@@ -5,10 +5,10 @@ import ChatList from './ChatList';
 interface SidebarProps {
   isOpen: boolean;
   chatSessions: ChatSession[];
-  currentChatId: number;
-  onSelectChat: (id: number) => void;
+  currentChatId: string;
+  onSelectChat: (id: string) => void;
   onCreateNewChat: () => void;
-  onDeleteChat: (chatId: number, e: React.MouseEvent<HTMLButtonElement>) => void;
+  onDeleteChat: (chatId: string, e: React.MouseEvent<HTMLButtonElement>) => void;
   onCloseSidebar: () => void;
 }
 

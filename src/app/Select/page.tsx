@@ -9,17 +9,32 @@ import LayoutSwitcher, { LayoutType } from './components/LayoutSwitcher';
 import GridLayout from './components/GridLayout';
 import AccordionLayout from './components/AccordionLayout';
 import ListLayout from './components/ListLayout';
+import { useAuth } from '../../contexts/AuthContext';
 import { useEffect } from 'react';
 
 export default function DepartmentSelection() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [currentLayout, setCurrentLayout] = useState<LayoutType>('accordion');
 
+  // 権限に基づいてオプションをフィルタリング
+  const filteredOptions = useMemo(() => {
+    const userPermission = user?.user_metadata?.permission as string;
+    
+    // 研究員または管理職の場合は全てのオプションを表示
+    if (userPermission === '研究員' || userPermission === '管理職') {
+      return OPTIONS;
+    }
+    
+    // それ以外の場合は管理部門のオプションを除外
+    return OPTIONS.filter(option => option.department !== '管理');
+  }, [user]);
+
   const selectedLabel = useMemo(
-    () => OPTIONS.find((o) => o.id === selectedId)?.label ?? null,
-    [selectedId]
+    () => filteredOptions.find((o) => o.id === selectedId)?.label ?? null,
+    [selectedId, filteredOptions]
   );
 
   const handleNavigate = (opt: Option) => {
@@ -47,7 +62,7 @@ export default function DepartmentSelection() {
           <section aria-label="利用できる項目" className="relative">
           {currentLayout === 'grid' && (
             <GridLayout
-              options={OPTIONS}
+              options={filteredOptions}
               selectedId={selectedId}
               isPending={isPending}
               onNavigate={handleNavigate}
@@ -56,7 +71,7 @@ export default function DepartmentSelection() {
           
           {currentLayout === 'accordion' && (
             <AccordionLayout
-              options={OPTIONS}
+              options={filteredOptions}
               selectedId={selectedId}
               isPending={isPending}
               onNavigate={handleNavigate}
@@ -65,7 +80,7 @@ export default function DepartmentSelection() {
           
           {currentLayout === 'list' && (
             <ListLayout
-              options={OPTIONS}
+              options={filteredOptions}
               selectedId={selectedId}
               isPending={isPending}
               onNavigate={handleNavigate}

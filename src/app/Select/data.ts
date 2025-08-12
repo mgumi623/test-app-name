@@ -3,6 +3,7 @@ import {
   Heart,
   MessageSquare,
   Bot,
+  BarChart3,
 } from 'lucide-react';
 import { Option } from './types';
 
@@ -42,5 +43,14 @@ export const OPTIONS: Option[] = [
     href: '/corporate',
     Icon: MessageSquare,
     gradient: 'from-violet-500 to-indigo-600',
+  },
+  {
+    id: 'admin-analytics',
+    department: '管理',
+    label: '分析ダッシュボード',
+    description: 'サイト利用状況とパフォーマンス分析',
+    href: '/admin/analytics',
+    Icon: BarChart3,
+    gradient: 'from-orange-500 to-amber-600',
   },
 ];

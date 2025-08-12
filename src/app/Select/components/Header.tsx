@@ -1,9 +1,9 @@
 'use client';
 
-import { CalendarClock } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import LogoutButton from '@/components/LogoutButton';
 import { useAuth } from '@/contexts/AuthContext';
+import { SeiwakaiCloverIcon } from '@/components/icons/SeiwakaiCloverIcon';
 
 export default function Header() {
   const { userData } = useAuth();
@@ -19,7 +19,7 @@ export default function Header() {
       <div className="text-center">
         <Avatar className="w-16 h-16 mx-auto shadow">
           <AvatarFallback className="bg-secondary border border-border">
-            <CalendarClock aria-hidden className="w-8 h-8 text-secondary-foreground" />
+            <SeiwakaiCloverIcon className="w-8 h-8 text-secondary-foreground" />
           </AvatarFallback>
         </Avatar>
         <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">

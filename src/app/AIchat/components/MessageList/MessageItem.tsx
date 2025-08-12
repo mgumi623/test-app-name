@@ -6,8 +6,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 interface MessageItemProps {
   message: ChatMessage;
   index: number;
-  copiedMessageId: number | null;
-  onCopyMessage: (text: string, messageId: number) => void;
+  copiedMessageId: string | null;
+  onCopyMessage: (text: string, messageId: string) => void;
 }
 
 export default function MessageItem({ 

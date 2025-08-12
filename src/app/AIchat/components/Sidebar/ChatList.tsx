@@ -3,9 +3,9 @@ import { ChatSession } from '../../types';
 
 interface ChatListProps {
   chatSessions: ChatSession[];
-  currentChatId: number;
-  onSelectChat: (id: number) => void;
-  onDeleteChat: (chatId: number, e: React.MouseEvent<HTMLButtonElement>) => void;
+  currentChatId: string;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (chatId: string, e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export default function ChatList({ 

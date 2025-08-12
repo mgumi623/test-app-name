@@ -14,6 +14,12 @@ import {
   MessageCircle,
   Plus,
   X,
+  Send,
+  Megaphone,
+  Target,
+  Users,
+  Calendar,
+  Lightbulb,
 } from "lucide-react";
 
 // 型定義
@@ -37,14 +43,26 @@ interface FeedbackMessage {
   replies: number;
   date: string;
   anonymous: boolean;
+  author?: string;
+}
+
+interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  type: "info" | "urgent" | "event";
+  date: string;
+  author: string;
+  priority: "high" | "medium" | "low";
 }
 
 const CorporateCommunicationApp: FC = () => {
-  const [activeTab, setActiveTab] = useState<"vision" | "feedback">("vision");
+  const [activeTab, setActiveTab] = useState<"vision" | "feedback" | "announcements">("vision");
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState<"message" | "vision">("message");
+  const [modalType, setModalType] = useState<"message" | "vision" | "announcement">("message");
   const [messages, setMessages] = useState<FeedbackMessage[]>([]);
   const [visions, setVisions] = useState<Vision[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newVision, setNewVision] = useState<
     Pick<Vision, "title" | "content" | "type" | "priority">
@@ -52,6 +70,14 @@ const CorporateCommunicationApp: FC = () => {
     title: "",
     content: "",
     type: "short",
+    priority: "medium",
+  });
+  const [newAnnouncement, setNewAnnouncement] = useState<
+    Pick<Announcement, "title" | "content" | "type" | "priority">
+  >({
+    title: "",
+    content: "",
+    type: "info",
     priority: "medium",
   });
   const [filter, setFilter] = useState<"all" | FeedbackMessage["category"]>("all");
@@ -121,7 +147,7 @@ const CorporateCommunicationApp: FC = () => {
     };
   }, [showModal]);
 
-  const openModal = (type: "message" | "vision") => {
+  const openModal = (type: "message" | "vision" | "announcement") => {
     setModalType(type);
     setShowModal(true);
   };
@@ -158,6 +184,18 @@ const CorporateCommunicationApp: FC = () => {
       views: 0,
     };
     setVisions((prev) => [vision, ...prev]);
+    closeModal();
+  };
+
+  const handleSubmitAnnouncement = () => {
+    if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) return;
+    const announcement: Announcement = {
+      id: announcements.length + 1,
+      ...newAnnouncement,
+      author: userRole === "management" ? "経営陣" : "部門長",
+      date: new Date().toISOString().split("T")[0],
+    };
+    setAnnouncements((prev) => [announcement, ...prev]);
     closeModal();
   };
 
@@ -259,26 +297,210 @@ const CorporateCommunicationApp: FC = () => {
         {/* ここから先は元のJSXを維持 */}
       </main>
 
+      {/* モーダル */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {modalType === "message" ? "意見を投稿" :
+                   modalType === "vision" ? "目標・ビジョンを投稿" : "お知らせを投稿"}
+                </h3>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {modalType === "message" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      内容
+                    </label>
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                      rows={4}
+                      placeholder="あなたの意見やフィードバックを入力してください..."
+                    />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSubmitMessage}
+                      className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors duration-200"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>投稿する</span>
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {modalType === "vision" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      タイトル
+                    </label>
+                    <input
+                      type="text"
+                      value={newVision.title}
+                      onChange={(e) => setNewVision(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      placeholder="目標・ビジョンのタイトル"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      内容
+                    </label>
+                    <textarea
+                      value={newVision.content}
+                      onChange={(e) => setNewVision(prev => ({ ...prev, content: e.target.value }))}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                      rows={4}
+                      placeholder="目標の詳細や方針を入力してください..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        期間
+                      </label>
+                      <select
+                        value={newVision.type}
+                        onChange={(e) => setNewVision(prev => ({ ...prev, type: e.target.value as Vision["type"] }))}
+                        className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      >
+                        <option value="short">短期</option>
+                        <option value="long">長期</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        優先度
+                      </label>
+                      <select
+                        value={newVision.priority}
+                        onChange={(e) => setNewVision(prev => ({ ...prev, priority: e.target.value as Vision["priority"] }))}
+                        className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      >
+                        <option value="low">低</option>
+                        <option value="medium">中</option>
+                        <option value="high">高</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSubmitVision}
+                      className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>投稿する</span>
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {modalType === "announcement" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      タイトル
+                    </label>
+                    <input
+                      type="text"
+                      value={newAnnouncement.title}
+                      onChange={(e) => setNewAnnouncement(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      placeholder="お知らせのタイトル"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      内容
+                    </label>
+                    <textarea
+                      value={newAnnouncement.content}
+                      onChange={(e) => setNewAnnouncement(prev => ({ ...prev, content: e.target.value }))}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none"
+                      rows={4}
+                      placeholder="お知らせの内容を入力してください..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        種類
+                      </label>
+                      <select
+                        value={newAnnouncement.type}
+                        onChange={(e) => setNewAnnouncement(prev => ({ ...prev, type: e.target.value as Announcement["type"] }))}
+                        className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      >
+                        <option value="info">お知らせ</option>
+                        <option value="urgent">緊急</option>
+                        <option value="event">イベント</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        重要度
+                      </label>
+                      <select
+                        value={newAnnouncement.priority}
+                        onChange={(e) => setNewAnnouncement(prev => ({ ...prev, priority: e.target.value as Announcement["priority"] }))}
+                        className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                      >
+                        <option value="low">参考</option>
+                        <option value="medium">通常</option>
+                        <option value="high">重要</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSubmitAnnouncement}
+                      className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>投稿する</span>
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        .animate-modalSlideIn {
-          animation: modalSlideIn 0.3s ease-out;
-        }
-        .hover\\:scale-102:hover {
-          transform: scale(1.02);
-        }
-        .hover\\:scale-101:hover {
-          transform: scale(1.01);
-        }
+        @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out }
       `}</style>
     </div>
   );
