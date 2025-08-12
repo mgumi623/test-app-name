@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
+import { AuthProvider } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -27,21 +29,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        initial={{ opacity: 0, scale: 0.98, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: -8 }}
-        transition={{ 
-          duration: 0.25, 
-          ease: [0.25, 0.1, 0.25, 1.0],
-          opacity: { duration: 0.15 }
-        }}
-        style={{ minHeight: '100vh' }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <AuthProvider>
+      <ProtectedRoute>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: -8 }}
+            transition={{ 
+              duration: 0.25, 
+              ease: [0.25, 0.1, 0.25, 1.0],
+              opacity: { duration: 0.15 }
+            }}
+            style={{ minHeight: '100vh' }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </ProtectedRoute>
+    </AuthProvider>
   );
 }

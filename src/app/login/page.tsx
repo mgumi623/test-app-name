@@ -1,18 +1,20 @@
 'use client';
-import React, { useState, ChangeEvent, MouseEvent } from 'react';
+import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Eye, EyeOff, Lock, User, Bot } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
-  /* ----------------------------- Supabase client ---------------------------- */
-  const supabase = createClientComponentClient();
+  /* ----------------------------- Auth context ---------------------------- */
+  const { signIn } = useAuth();
 
   /* ------------------------------ React states ------------------------------ */
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ login_id: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const [showResetForm, setShowResetForm] = useState(false);
   const [resetData, setResetData] = useState({ login_id: '', newPassword: '', confirmPassword: '' });
@@ -26,55 +28,34 @@ export default function LoginPage() {
     setResetData({ ...resetData, [e.target.name]: e.target.value });
 
   /* --------------------------------- Login --------------------------------- */
-  const handleSubmit = async (e: MouseEvent<HTMLButtonElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
+    
     if (!formData.login_id || !formData.password) {
-      alert('IDとパスワードを入力してください。');
+      setError('IDとパスワードを入力してください。');
       return;
     }
 
-    const email = `${formData.login_id}@example.com`;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: formData.password });
+    setIsLoading(true);
 
-    if (error) {
-      alert(error.message);
-      return;
+    try {
+      const email = `${formData.login_id}@example.com`;
+      const result = await signIn(email, formData.password);
+
+      if (result.error) {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('ログインに失敗しました。再度お試しください。');
+    } finally {
+      setIsLoading(false);
     }
-
-    const user = data.user;
-    const meta = user.user_metadata || {};
-
-    localStorage.setItem('user_id', user.id);
-    localStorage.setItem('user_name', meta.name || '');
-    localStorage.setItem('user_role', meta.role || '');
-    localStorage.setItem('user_permission', meta.permission || '');
-    localStorage.setItem('is_authenticated', 'true');
-
-    window.location.href = '/Select';
   };
 
   /* ---------------------------- Password Reset ----------------------------- */
   const handlePasswordReset = async () => {
-    if (!resetData.newPassword || !resetData.confirmPassword) {
-      setResetMessage('全ての項目を入力してください。');
-      return;
-    }
-
-    if (resetData.newPassword !== resetData.confirmPassword) {
-      setResetMessage('パスワードが一致しません。');
-      return;
-    }
-
-    const { error } = await supabase.auth.updateUser({
-      password: resetData.newPassword,
-    });
-
-    if (error) {
-      setResetMessage('変更失敗: ' + error.message);
-    } else {
-      setResetMessage('パスワードが正常に変更されました。');
-      setResetData({ login_id: '', newPassword: '', confirmPassword: '' });
-    }
+    setResetMessage('パスワードリセットは管理者にお問い合わせください。');
   };
 
   /* --------------------------------- JSX ---------------------------------- */
@@ -108,7 +89,14 @@ export default function LoginPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-medium text-gray-900">アカウント情報を入力</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* エラーメッセージ */}
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
               {/* ユーザーID */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">ユーザーID</label>
@@ -152,14 +140,15 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* ログインボタン */}
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium text-base rounded-lg transition-colors"
-              >
-                サインイン
-              </Button>
+                {/* ログインボタン */}
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-base rounded-lg transition-colors"
+                >
+                  {isLoading ? '認証中...' : 'サインイン'}
+                </Button>
+              </form>
 
               {/* パスワードリセットリンク */}
               <div className="text-center">
@@ -173,48 +162,18 @@ export default function LoginPage() {
                 </Button>
               </div>
 
-              {/* パスワードリセットフォーム */}
+              {/* パスワードリセットメッセージ */}
               {showResetForm && (
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border animate-fade-in-up">
                   <h3 className="text-sm font-medium text-gray-900 mb-3">パスワードリセット</h3>
-                  <div className="space-y-3">
-                    <Input
-                      type="text"
-                      name="login_id"
-                      value={resetData.login_id}
-                      onChange={handleResetInputChange}
-                      placeholder="ユーザーID"
-                      className="h-10 border-gray-200 focus:border-gray-300"
-                    />
-                    <Input
-                      type="password"
-                      name="newPassword"
-                      value={resetData.newPassword}
-                      onChange={handleResetInputChange}
-                      placeholder="新しいパスワード"
-                      className="h-10 border-gray-200 focus:border-gray-300"
-                    />
-                    <Input
-                      type="password"
-                      name="confirmPassword"
-                      value={resetData.confirmPassword}
-                      onChange={handleResetInputChange}
-                      placeholder="パスワード確認"
-                      className="h-10 border-gray-200 focus:border-gray-300"
-                    />
-                    <Button
-                      type="button"
-                      onClick={handlePasswordReset}
-                      className="w-full h-10 bg-gray-700 hover:bg-gray-800 text-white text-sm rounded-md"
-                    >
-                      パスワードを更新
-                    </Button>
-                    {resetMessage && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <p className="text-sm text-blue-700">{resetMessage}</p>
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    パスワードを忘れた場合は、システム管理者にお問い合わせください。
+                  </p>
+                  {resetMessage && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-700">{resetMessage}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
