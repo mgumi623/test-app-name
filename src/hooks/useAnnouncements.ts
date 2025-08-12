@@ -70,7 +70,7 @@ export function useAnnouncements() {
         if (stored) {
           const parsed = JSON.parse(stored);
           // Date オブジェクトに変換
-          const converted = parsed.map((announcement: any) => ({
+          const converted = parsed.map((announcement: Announcement) => ({
             ...announcement,
             createdAt: new Date(announcement.createdAt),
             updatedAt: new Date(announcement.updatedAt),

@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import AnnouncementPopup from '@/components/AnnouncementPopup';
+import { Announcement } from '@/types/announcement';
 
 export default function DepartmentSelection() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function DepartmentSelection() {
   // アナウンス関連の状態
   const { announcements, getPopupAnnouncements, incrementPopupDisplayCount, loading: announcementsLoading } = useAnnouncements();
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
-  const [popupAnnouncements, setPopupAnnouncements] = useState<any[]>([]);
+  const [popupAnnouncements, setPopupAnnouncements] = useState<Announcement[]>([]);
   const [announcementPopupChecked, setAnnouncementPopupChecked] = useState(false);
 
   // 権限に基づいてオプションをフィルタリング
@@ -56,9 +57,9 @@ export default function DepartmentSelection() {
       };
       (window as any).showAnnouncementStorage = () => {
         const closedAnnouncements = localStorage.getItem('closedAnnouncements');
-        const announcements = localStorage.getItem('announcements');
+        const storedAnnouncements = localStorage.getItem('announcements');
         console.log('Closed announcements:', closedAnnouncements ? JSON.parse(closedAnnouncements) : []);
-        console.log('Announcements in storage:', announcements ? JSON.parse(announcements).length : 0);
+        console.log('Announcements in storage:', storedAnnouncements ? JSON.parse(storedAnnouncements).length : 0);
       };
     }
   }, []);

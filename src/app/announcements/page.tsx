@@ -67,7 +67,7 @@ export default function AnnouncementsPage() {
 
   // フィルタリングされたアナウンス
   const filteredAnnouncements = useMemo(() => {
-    let filtered = announcements.filter(announcement => {
+    const filtered = announcements.filter(announcement => {
       // 管理者以外は自分の部署のアナウンスのみ表示
       if (!isAdmin) {
         const isDepartmentMatch = 

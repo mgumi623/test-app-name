@@ -5,7 +5,6 @@ import {
   Bot,
   BarChart3,
   Bell,
-  Settings,
 } from 'lucide-react';
 import { Option } from './types';
 

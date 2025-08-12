@@ -15,7 +15,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, AlertTriangle, Info, Bell, Save, X } from 'lucide-react';
+import { AlertTriangle, Info, Bell, Save, X } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { 
   Announcement, 
@@ -76,7 +76,7 @@ export default function AnnouncementForm({ announcement, onClose }: Announcement
     }
   }, [announcement]);
 
-  const handleInputChange = (field: keyof AnnouncementFormData, value: any) => {
+  const handleInputChange = (field: keyof AnnouncementFormData, value: string | number | boolean | undefined) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
