@@ -12,7 +12,8 @@
       "Bash(npm run build:*)",
       "Bash(git add:*)",
       "Bash(node:*)",
-      "Bash(del debug-analytics.js)"
+      "Bash(del debug-analytics.js)",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "deny": []
   }

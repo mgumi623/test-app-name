@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useErrorTracking } from '@/hooks/useAnalytics';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
@@ -34,10 +33,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ProtectedRoute>
-          <AnimatePresence mode="wait" initial={false}>
+    <AuthProvider>
+      <ProtectedRoute>
+        <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={pathname}
               initial={{ opacity: 0, scale: 0.98, y: 8 }}
@@ -55,6 +53,5 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </AnimatePresence>
         </ProtectedRoute>
       </AuthProvider>
-    </ThemeProvider>
   );
 }

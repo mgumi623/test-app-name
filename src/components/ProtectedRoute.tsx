@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const publicRoutes = ['/login'];
+const publicRoutes = ['/', '/login', '/posts'];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();

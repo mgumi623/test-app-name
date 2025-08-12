@@ -294,7 +294,80 @@ const CorporateCommunicationApp: FC = () => {
             </button>
           </div>
         </nav>
-        {/* ここから先は元のJSXを維持 */}
+        {/* コンテンツ */}
+{activeTab === "vision" && (
+  <section className="space-y-4">
+    <div className="flex justify-between items-center">
+      <h2 className="text-lg font-semibold text-gray-800">ビジョン一覧</h2>
+      <button
+        onClick={() => openModal("vision")}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+      >
+        <Plus className="w-4 h-4" /> 追加
+      </button>
+    </div>
+
+    {visions.length === 0 ? (
+      <p className="text-gray-500">まだ投稿がありません。</p>
+    ) : (
+      <ul className="grid md:grid-cols-2 gap-4">
+        {visions.map(v => (
+          <li key={v.id} className="p-4 bg-white rounded-xl shadow border border-white/60">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-gray-900">{v.title}</h3>
+              <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                {v.type === "short" ? "短期" : "長期"} / {v.priority}
+              </span>
+            </div>
+            <p className="text-gray-700 mb-3">{v.content}</p>
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>{v.author}・{v.date}</span>
+              <div className="flex items-center gap-4">
+                <button onClick={() => toggleLike("vision", v.id)} className="inline-flex items-center gap-1 hover:text-pink-600">
+                  <Heart className="w-4 h-4" /> {v.likes}
+                </button>
+                <span className="inline-flex items-center gap-1"><Eye className="w-4 h-4" /> {v.views}</span>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+)}
+
+{activeTab === "feedback" && (
+  <section className="space-y-4">
+    <div className="flex justify-between items-center">
+      <h2 className="text-lg font-semibold text-gray-800">従業員の声</h2>
+      <button
+        onClick={() => openModal("message")}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+      >
+        <Plus className="w-4 h-4" /> 投稿
+      </button>
+    </div>
+
+    {filteredMessages.length === 0 ? (
+      <p className="text-gray-500">まだ投稿がありません。</p>
+    ) : (
+      <ul className="space-y-3">
+        {filteredMessages.map(m => (
+          <li key={m.id} className="p-4 bg-white rounded-xl shadow border border-white/60">
+            <p className="text-gray-800 mb-3">{m.content}</p>
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>{m.date}・{m.anonymous ? "匿名" : (m.author || "社員")}</span>
+              <button onClick={() => toggleLike("message", m.id)} className="inline-flex items-center gap-1 hover:text-pink-600">
+                <Heart className="w-4 h-4" /> {m.likes}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+)}
+
       </main>
 
       {/* モーダル */}

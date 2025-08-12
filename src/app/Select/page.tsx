@@ -11,6 +11,9 @@ import AccordionLayout from './components/AccordionLayout';
 import ListLayout from './components/ListLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { useAnnouncements } from '@/hooks/useAnnouncements';
+import AnnouncementPopup from '@/components/AnnouncementPopup';
 
 export default function DepartmentSelection() {
   const router = useRouter();
@@ -18,6 +21,12 @@ export default function DepartmentSelection() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [currentLayout, setCurrentLayout] = useState<LayoutType>('accordion');
+  
+  // アナウンス関連の状態
+  const { announcements, getPopupAnnouncements, incrementPopupDisplayCount, loading: announcementsLoading } = useAnnouncements();
+  const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
+  const [popupAnnouncements, setPopupAnnouncements] = useState<any[]>([]);
+  const [announcementPopupChecked, setAnnouncementPopupChecked] = useState(false);
 
   // 権限に基づいてオプションをフィルタリング
   const filteredOptions = useMemo(() => {
@@ -37,6 +46,60 @@ export default function DepartmentSelection() {
     [selectedId, filteredOptions]
   );
 
+  // デバッグ用：localStorage クリア機能
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).clearAnnouncementStorage = () => {
+        localStorage.removeItem('closedAnnouncements');
+        localStorage.removeItem('announcements');
+        console.log('Announcement storage cleared. Please refresh to see popups again.');
+      };
+      (window as any).showAnnouncementStorage = () => {
+        const closedAnnouncements = localStorage.getItem('closedAnnouncements');
+        const announcements = localStorage.getItem('announcements');
+        console.log('Closed announcements:', closedAnnouncements ? JSON.parse(closedAnnouncements) : []);
+        console.log('Announcements in storage:', announcements ? JSON.parse(announcements).length : 0);
+      };
+    }
+  }, []);
+
+  // アナウンスポップアップ表示のチェック
+  useEffect(() => {
+    if (user && !announcementPopupChecked && !announcementsLoading && announcements.length > 0) {
+      try {
+        const userDepartment = user.user_metadata?.department as string;
+        console.log('User department:', userDepartment);
+        console.log('Available announcements:', announcements.length);
+        
+        const popupTargetAnnouncements = getPopupAnnouncements(userDepartment);
+        console.log('Popup target announcements:', popupTargetAnnouncements.length);
+        
+        if (popupTargetAnnouncements.length > 0) {
+          // localStorage から閉じた アナウンスをチェック
+          const closedAnnouncementsJson = localStorage.getItem('closedAnnouncements');
+          const closedAnnouncements = closedAnnouncementsJson ? JSON.parse(closedAnnouncementsJson) : [];
+          console.log('Closed announcements:', closedAnnouncements);
+          
+          // 閉じていないアナウンスのみフィルタ
+          const unviewedAnnouncements = popupTargetAnnouncements.filter(
+            announcement => !closedAnnouncements.includes(announcement.id)
+          );
+          console.log('Unviewed announcements:', unviewedAnnouncements.length);
+          
+          if (unviewedAnnouncements.length > 0) {
+            console.log('Setting popup announcements:', unviewedAnnouncements);
+            setPopupAnnouncements(unviewedAnnouncements);
+            setShowAnnouncementPopup(true);
+          }
+        }
+        setAnnouncementPopupChecked(true);
+      } catch (error) {
+        console.error('Error getting popup announcements:', error);
+        setAnnouncementPopupChecked(true);
+      }
+    }
+  }, [user, announcementPopupChecked, announcementsLoading, announcements.length, getPopupAnnouncements]);
+
   const handleNavigate = (opt: Option) => {
     if (isPending) return; // 二重押下防止
     setSelectedId(opt.id);
@@ -44,6 +107,39 @@ export default function DepartmentSelection() {
       router.push(opt.href);
     });
   };
+
+  const handleCloseAnnouncementPopup = () => {
+    // 閉じたアナウンスのIDをlocalStorageに保存
+    if (popupAnnouncements.length > 0) {
+      try {
+        const closedAnnouncementsJson = localStorage.getItem('closedAnnouncements');
+        const closedAnnouncements = closedAnnouncementsJson ? JSON.parse(closedAnnouncementsJson) : [];
+        
+        // 現在のポップアップのアナウンスIDを追加
+        const newClosedAnnouncements = [...closedAnnouncements, ...popupAnnouncements.map(announcement => announcement.id)];
+        const uniqueClosedAnnouncements = [...new Set(newClosedAnnouncements)];
+        
+        localStorage.setItem('closedAnnouncements', JSON.stringify(uniqueClosedAnnouncements));
+        
+        // 表示回数をカウントアップ
+        popupAnnouncements.forEach(announcement => {
+          incrementPopupDisplayCount(announcement.id);
+        });
+        
+      } catch (error) {
+        console.error('Error saving closed announcements:', error);
+      }
+    }
+    
+    setShowAnnouncementPopup(false);
+    setPopupAnnouncements([]);
+  };
+
+  const handleAnnouncementViewed = (announcementId: string) => {
+    // 個別のアナウンス表示回数をカウントアップ
+    incrementPopupDisplayCount(announcementId);
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground">
@@ -96,6 +192,17 @@ export default function DepartmentSelection() {
           © 2025 Koreha Maenaka ga tukutta. www.
         </footer>
       </main>
+
+      {/* アナウンスポップアップ */}
+      <AnimatePresence>
+        {showAnnouncementPopup && popupAnnouncements.length > 0 && (
+          <AnnouncementPopup
+            announcements={popupAnnouncements}
+            onClose={handleCloseAnnouncementPopup}
+            onAnnouncementViewed={handleAnnouncementViewed}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ユーザーの reduce-motion 設定に追従 */}
       <style jsx global>{`

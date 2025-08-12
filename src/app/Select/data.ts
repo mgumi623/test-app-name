@@ -4,6 +4,8 @@ import {
   MessageSquare,
   Bot,
   BarChart3,
+  Bell,
+  Settings,
 } from 'lucide-react';
 import { Option } from './types';
 
@@ -43,6 +45,15 @@ export const OPTIONS: Option[] = [
     href: '/corporate',
     Icon: MessageSquare,
     gradient: 'from-violet-500 to-indigo-600',
+  },
+  {
+    id: 'all-announcements',
+    department: '全部署',
+    label: 'アナウンス',
+    description: 'お知らせ・重要な情報の確認・管理',
+    href: '/announcements',
+    Icon: Bell,
+    gradient: 'from-yellow-500 to-orange-600',
   },
   {
     id: 'admin-analytics',
