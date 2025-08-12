@@ -10,27 +10,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     // 初回マウント後に表示開始
-    const timeout = setTimeout(() => {
-      setMounted(true);
-    }, 10); // 少し遅延させるのがポイント
-
-    return () => clearTimeout(timeout);
+    setMounted(true);
   }, []);
 
   if (!mounted) {
-    // 初回描画時は空白
-    return <div style={{ background: 'white', minHeight: '100vh' }} />;
+    // 初回描画時は透明な状態で待機
+    return (
+      <div 
+        style={{ 
+          minHeight: '100vh',
+          opacity: 0,
+          backgroundColor: 'hsl(var(--background))'
+        }} 
+      />
+    );
   }
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
-        initial={{ opacity: 0, x: 100 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -100 }}
-        transition={{ duration: 0.5, ease: 'easeInOut' }}
-        style={{ minHeight: '100vh', overflowX: 'hidden' }}
+        initial={{ opacity: 0, scale: 0.98, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: -8 }}
+        transition={{ 
+          duration: 0.25, 
+          ease: [0.25, 0.1, 0.25, 1.0],
+          opacity: { duration: 0.15 }
+        }}
+        style={{ minHeight: '100vh' }}
       >
         {children}
       </motion.div>

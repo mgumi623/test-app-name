@@ -159,33 +159,6 @@ export default function HospitalNews({ className }: HospitalNewsProps) {
         <p className="text-muted-foreground">最新の病院方針、スタッフからの意見、お知らせをお届けします</p>
       </div>
 
-      {/* 統計サマリー */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="text-center">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-blue-600 mb-1">6</div>
-            <p className="text-sm text-muted-foreground">今月のニュース</p>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-600 mb-1">4</div>
-            <p className="text-sm text-muted-foreground">スタッフ提案</p>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-purple-600 mb-1">2</div>
-            <p className="text-sm text-muted-foreground">表彰・実績</p>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-amber-600 mb-1">98%</div>
-            <p className="text-sm text-muted-foreground">患者満足度</p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* ニュースリスト */}
       <Card>
