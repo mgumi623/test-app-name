@@ -42,9 +42,9 @@ export default function ListLayout({ options, selectedId, isPending, onNavigate 
               </div>
               
               <div className="flex items-center gap-3 ml-4">
-                {option.icon && (
+                {option.Icon && (
                   <div className="flex-shrink-0 text-muted-foreground">
-                    <option.icon className="w-5 h-5" />
+                    <option.Icon className="w-5 h-5" />
                   </div>
                 )}
                 
