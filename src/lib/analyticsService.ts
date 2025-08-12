@@ -42,11 +42,25 @@ class AnalyticsService {
   private sessionStartTime: Date = new Date();
   private pageViews: number = 0;
 
+  private initialized = false;
+
   constructor() {
     if (typeof window !== 'undefined') {
       this.currentSessionId = this.generateSessionId();
-      this.initializeSession();
+      // 初期化を遅延実行
+      setTimeout(() => this.initializeSession(), 1000);
       this.setupUnloadListener();
+    }
+  }
+
+  private async ensureInitialized() {
+    if (this.initialized || typeof window === 'undefined') return;
+    
+    try {
+      await this.initializeSession();
+      this.initialized = true;
+    } catch (error) {
+      console.warn('Analytics initialization skipped:', error);
     }
   }
 
@@ -63,8 +77,56 @@ class AnalyticsService {
     return 'desktop';
   }
 
-  private async initializeSession() {
+  private async initializeSession(): Promise<void> {
     try {
+      console.log('🔄 Starting analytics session initialization...');
+      console.log('🔧 Supabase client info:', {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL || 'Not set',
+        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Not set'
+      });
+      
+      // まず基本的な接続テスト
+      const { data: basicTest, error: basicError } = await supabase
+        .from('auth')
+        .select('*')
+        .limit(1);
+      
+      console.log('🔌 Basic connection test:', { basicTest, basicError });
+      
+      // Supabase接続テスト
+      const { data: connectionTest, error: connectionError } = await supabase
+        .from('information_schema')
+        .select('table_name')
+        .eq('table_name', 'analytics_sessions')
+        .limit(1);
+      
+      console.log('📊 Connection test result:', { connectionTest, connectionError });
+      
+      if (connectionError) {
+        console.warn('❌ Supabase connection failed:', connectionError);
+        return;
+      }
+      
+      // テーブル存在確認
+      const { error: tableError } = await supabase
+        .from('analytics_sessions')
+        .select('id')
+        .limit(1);
+      
+      if (tableError) {
+        console.warn('❌ Analytics table not found:', {
+          message: tableError.message,
+          code: tableError.code,
+          details: tableError.details,
+          hint: tableError.hint
+        });
+        console.warn('🔧 Please run analytics-setup.sql in Supabase to create the analytics tables');
+        return;
+      }
+      
+      console.log('✅ Analytics tables verified');
+
+      console.log('🔄 Creating session data...');
       const sessionData: AnalyticsSession = {
         session_id: this.currentSessionId,
         start_time: this.sessionStartTime.toISOString(),
@@ -74,7 +136,13 @@ class AnalyticsService {
         page_views: 0,
       };
 
-      const { data: userData } = await supabase.auth.getUser();
+      console.log('🔄 Getting user data...');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.warn('⚠️ User auth error:', userError);
+      }
+      
       if (userData.user) {
         sessionData.user_id = userData.user.id;
         // ユーザーのpermission情報を取得（複数の場所をチェック）
@@ -85,20 +153,52 @@ class AnalyticsService {
         sessionData.user_permission = permission as string;
         
         // デバッグログ
-        console.log('Analytics Session - User permission:', permission);
-        console.log('Analytics Session - User metadata:', userData.user.user_metadata);
-        console.log('Analytics Session - Raw user meta data:', (userData.user as any).raw_user_meta_data);
+        console.log('👤 User authenticated - ID:', userData.user.id);
+        console.log('🔑 User permission:', permission);
+        console.log('📝 User metadata:', userData.user.user_metadata);
+      } else {
+        console.log('👤 User not authenticated, using anonymous session');
       }
+      
+      console.log('📋 Final session data:', sessionData);
 
-      const { error } = await supabase
+      console.log('🔄 Inserting session data...');
+      const { data: insertResult, error } = await supabase
         .from('analytics_sessions')
-        .insert([sessionData]);
+        .insert([sessionData])
+        .select();
 
       if (error) {
-        console.error('Failed to initialize analytics session:', error);
+        console.error('❌ Failed to initialize analytics session:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          sessionData: sessionData
+        });
+        
+        // 具体的なエラー分析
+        if (error.code === 'PGRST116') {
+          console.error('🔧 Table does not exist. Please run analytics-setup.sql');
+        } else if (error.code === '23505') {
+          console.error('🔧 Duplicate session ID. Retrying with new ID...');
+          this.currentSessionId = this.generateSessionId();
+          await this.initializeSession(); // リトライ
+          return;
+        } else if (error.message.includes('permission')) {
+          console.error('🔧 Permission denied. Check RLS policies.');
+        }
+      } else {
+        console.log('✅ Analytics session initialized successfully:', insertResult);
+        this.initialized = true;
       }
     } catch (error) {
-      console.error('Analytics initialization error:', error);
+      console.error('💥 Analytics initialization critical error:', {
+        error: error,
+        type: typeof error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }
 
@@ -109,6 +209,16 @@ class AnalyticsService {
   }
 
   async trackPageView(pagePath: string) {
+    if (typeof window === 'undefined') return;
+    
+    console.log('🔍 Tracking page view:', pagePath);
+    await this.ensureInitialized();
+    
+    if (!this.initialized) {
+      console.warn('⚠️ Analytics not initialized, skipping page view tracking');
+      return;
+    }
+    
     this.pageViews++;
     await this.trackEvent({
       session_id: this.currentSessionId,
@@ -121,6 +231,11 @@ class AnalyticsService {
   }
 
   async trackClick(elementId: string, elementType: string, pagePath?: string) {
+    if (typeof window === 'undefined') return;
+    
+    await this.ensureInitialized();
+    if (!this.initialized) return;
+    
     await this.trackEvent({
       session_id: this.currentSessionId,
       event_type: 'click',
@@ -131,6 +246,9 @@ class AnalyticsService {
   }
 
   async trackChatMessage(messageLength: number, isUser: boolean) {
+    if (typeof window === 'undefined') return;
+    
+    await this.ensureInitialized();
     await this.trackEvent({
       session_id: this.currentSessionId,
       event_type: 'chat_message',
@@ -144,6 +262,9 @@ class AnalyticsService {
   }
 
   async trackFeatureUse(featureName: string, pagePath: string, additionalData?: Record<string, any>) {
+    if (typeof window === 'undefined') return;
+    
+    await this.ensureInitialized();
     await this.trackEvent({
       session_id: this.currentSessionId,
       event_type: 'feature_use',
@@ -187,7 +308,16 @@ class AnalyticsService {
 
   private async trackEvent(event: AnalyticsEvent) {
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      console.log('🎯 Starting event tracking for:', event.event_type);
+      
+      // まず認証状態を確認
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.warn('⚠️ Auth error during event tracking:', authError);
+        // 認証エラーがあってもイベントトラッキングは続行
+      }
+      
       if (userData.user) {
         event.user_id = userData.user.id;
         const permission = 
@@ -196,19 +326,86 @@ class AnalyticsService {
           'unknown';
         event.user_permission = permission as string;
         
-        // デバッグログ
-        console.log('Analytics Event - User permission:', permission, 'Event type:', event.event_type);
+        console.log('👤 User data for event:', {
+          userId: userData.user.id,
+          permission,
+          email: userData.user.email
+        });
+      } else {
+        console.log('👤 Anonymous event tracking');
+        event.user_permission = 'anonymous';
       }
-
-      const { error } = await supabase
+      
+      // イベントデータの最終検証
+      const finalEvent = {
+        session_id: event.session_id,
+        user_id: event.user_id || null,
+        user_permission: event.user_permission || 'unknown',
+        event_type: event.event_type,
+        page_path: event.page_path || null,
+        element_id: event.element_id || null,
+        element_type: event.element_type || null,
+        event_data: event.event_data || null,
+      };
+      
+      console.log('📊 Final event data to insert:', finalEvent);
+      
+      // データベースに挿入
+      const { data: result, error } = await supabase
         .from('analytics_events')
-        .insert([event]);
+        .insert([finalEvent])
+        .select('id');
 
       if (error) {
-        console.error('Failed to track event:', error);
+        console.error('❌ Event tracking failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          eventType: event.event_type,
+          fullError: error,
+          attemptedData: finalEvent
+        });
+        
+        // 具体的なエラー分析
+        if (error.code === 'PGRST116') {
+          console.error('🔧 Analytics events table not found. Please run analytics-setup.sql');
+        } else if (error.code === '23505') {
+          console.error('🔧 Duplicate key constraint violation');
+        } else if (error.code === '23502') {
+          console.error('🔧 Not null constraint violation. Missing required field.');
+        } else if (error.code === '42703') {
+          console.error('🔧 Column does not exist in table');
+        } else if (error.message?.includes('permission')) {
+          console.error('🔧 RLS policy blocking insert. Check table policies.');
+        }
+        
+        // データベース状態をチェック
+        console.log('🔍 Checking database state...');
+        const { data: tableExists, error: tableError } = await supabase
+          .from('analytics_events')
+          .select('count')
+          .limit(0);
+          
+        if (tableError) {
+          console.error('🔧 Table access error:', tableError);
+        } else {
+          console.log('✅ Table accessible');
+        }
+        
+      } else {
+        console.log('✅ Event tracked successfully:', {
+          eventType: event.event_type,
+          insertedId: result?.[0]?.id
+        });
       }
     } catch (error) {
-      console.error('Event tracking error:', error);
+      console.error('💥 Event tracking critical error:', {
+        error,
+        type: typeof error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }
 

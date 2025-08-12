@@ -3,15 +3,56 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
-// シンプルなチャート代替コンポーネント
-const SimpleChart = ({ data, type }: { data: any[]; type: string }) => (
-  <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-    <div className="text-center">
-      <div className="text-4xl mb-2">📊</div>
-      <p className="text-gray-600">Chart ({type})</p>
-      <p className="text-sm text-gray-500">{data?.length || 0} data points</p>
-    </div>
-  </div>
+// Recharts components を動的インポート
+const DynamicLineChart = dynamic(
+  () => import('recharts').then((mod) => ({ 
+    default: ({ data }: { data: any[] }) => (
+      <mod.ResponsiveContainer width="100%" height={300}>
+        <mod.LineChart data={data}>
+          <mod.CartesianGrid strokeDasharray="3 3" />
+          <mod.XAxis dataKey="date" />
+          <mod.YAxis />
+          <mod.Tooltip />
+          <mod.Line type="monotone" dataKey="sessions" stroke="#3B82F6" name="セッション" />
+          <mod.Line type="monotone" dataKey="pageViews" stroke="#10B981" name="ページビュー" />
+        </mod.LineChart>
+      </mod.ResponsiveContainer>
+    )
+  })),
+  { 
+    ssr: false, 
+    loading: () => <div className="animate-pulse bg-gray-200 h-72 rounded"></div>
+  }
+);
+
+const DynamicPieChart = dynamic(
+  () => import('recharts').then((mod) => ({ 
+    default: ({ data, colors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'] }: { data: any[]; colors?: string[] }) => (
+      <mod.ResponsiveContainer width="100%" height={300}>
+        <mod.PieChart>
+          <mod.Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="count"
+          >
+            {data?.map((entry: any, index: number) => (
+              <mod.Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </mod.Pie>
+          <mod.Tooltip />
+        </mod.PieChart>
+      </mod.ResponsiveContainer>
+    )
+  })),
+  { 
+    ssr: false, 
+    loading: () => <div className="animate-pulse bg-gray-200 h-72 rounded"></div>
+  }
 );
 import { Calendar, Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -326,13 +367,15 @@ export default function AnalyticsDashboard() {
           {/* Daily Activity Chart */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">日別アクティビティ</h3>
-            <SimpleChart data={stats?.dailyActivity || []} type="line" />
+            <DynamicLineChart data={stats?.dailyActivity || []} />
           </Card>
 
           {/* Device Breakdown */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">デバイス別利用状況</h3>
-            <SimpleChart data={stats?.deviceBreakdown || []} type="pie" />
+            <DynamicPieChart 
+              data={stats?.deviceBreakdown?.map(item => ({ name: item.device, count: item.count })) || []} 
+            />
           </Card>
         </div>
 
@@ -341,7 +384,10 @@ export default function AnalyticsDashboard() {
           {/* Permission Breakdown */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">役職別利用状況</h3>
-            <SimpleChart data={stats?.permissionBreakdown || []} type="pie" />
+            <DynamicPieChart 
+              data={stats?.permissionBreakdown?.map(item => ({ name: item.permission, count: item.count })) || []}
+              colors={['#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#3B82F6']}
+            />
           </Card>
 
           {/* Permission Feature Usage */}
