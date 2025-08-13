@@ -2,6 +2,7 @@ import { Bot, User, Copy, Check } from 'lucide-react';
 import { ChatMessage } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { FormattedText } from '../../utils/textFormatter';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -46,9 +47,10 @@ export default function MessageItem({
           }`}
         >
           <div className="flex items-start justify-between">
-            <p className="text-sm sm:text-base whitespace-pre-wrap text-card-foreground">
-              {message.text}
-            </p>
+            <FormattedText
+              text={message.text}
+              className="text-sm sm:text-base whitespace-pre-wrap text-card-foreground"
+            />
             <Button
               variant="ghost"
               size="icon"

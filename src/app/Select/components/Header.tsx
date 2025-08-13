@@ -3,7 +3,6 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import LogoutButton from '@/components/LogoutButton';
 import { useAuth } from '@/contexts/AuthContext';
-import { SeiwakaiCloverIcon } from '@/components/icons/SeiwakaiCloverIcon';
 
 export default function Header() {
   const { userData } = useAuth();
@@ -18,8 +17,8 @@ export default function Header() {
       {/* メインヘッダー */}
       <div className="text-center">
         <Avatar className="w-16 h-16 mx-auto shadow">
-          <AvatarFallback className="bg-secondary border border-border">
-            <SeiwakaiCloverIcon className="w-8 h-8 text-secondary-foreground" />
+          <AvatarFallback className="bg-white border border-border">
+            <img src="/image/clover.svg" alt="Clover Logo" className="w-8 h-8" />
           </AvatarFallback>
         </Avatar>
         <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">

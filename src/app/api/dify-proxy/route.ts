@@ -1,13 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成';
+
+// モードに対応するAPI Keyを取得する関数
+function getApiKey(mode: ModeType): string {
+  switch (mode) {
+    case '通常':
+      return process.env.DIFY_API_KEY_NORMAL || '';
+    case '脳血管':
+      return process.env.DIFY_API_KEY_CEREBROVASCULAR || '';
+    case '感染マニュアル':
+      return process.env.DIFY_API_KEY_INFECTION || '';
+    case '議事録作成':
+      return process.env.DIFY_API_KEY_MINUTES || '';
+    default:
+      return process.env.DIFY_API_KEY_NORMAL || '';
+  }
+}
+
 export async function POST(req: NextRequest) {
-  const { prompt } = await req.json();
+  const { prompt, mode = '通常' } = await req.json();
 
   try {
+    const apiKey = getApiKey(mode as ModeType);
+    
+    if (!apiKey) {
+      return NextResponse.json({ 
+        error: `API Key not configured for mode: ${mode}` 
+      }, { status: 500 });
+    }
+
     const res = await fetch('https://api.dify.ai/v1/chat-messages', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.DIFY_API_KEY}`, // .env.local に app-xxxx
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

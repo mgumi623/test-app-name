@@ -5,12 +5,16 @@ import { useChatSessions } from './hooks/useChatSessions';
 import { useClipboard } from './hooks/useClipboard';
 import { usePageTracking, useAnalytics } from '../../hooks/useAnalytics';
 import Sidebar from './components/Sidebar';
-import Header from './components/Header';
+import Header, { ModeType } from './components/Header';
 import MessageList from './components/MessageList';
 import MessageInput from './components/MessageInput';
 import { globalStyles } from './utils/styles';
 
 const AIChatApp: React.FC = () => {
+  const [inputText, setInputText] = useState<string>('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [selectedMode, setSelectedMode] = useState<ModeType>('通常');
+
   const {
     chatSessions,
     currentChatId,
@@ -21,13 +25,10 @@ const AIChatApp: React.FC = () => {
     createNewChat,
     deleteChat,
     sendMessage,
-  } = useChatSessions();
+  } = useChatSessions(selectedMode);
 
   const { copiedMessageId, copyToClipboard } = useClipboard();
   const { trackFeatureUse } = useAnalytics();
-  
-  const [inputText, setInputText] = useState<string>('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // ページビュー追跡
   usePageTracking();
@@ -97,6 +98,8 @@ const AIChatApp: React.FC = () => {
           <Header
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            selectedMode={selectedMode}
+            onModeChange={setSelectedMode}
           />
 
           <div className="flex flex-col flex-1 overflow-hidden">
@@ -110,6 +113,7 @@ const AIChatApp: React.FC = () => {
             <MessageInput
               inputText={inputText}
               isTyping={isTyping}
+              selectedMode={selectedMode}
               onInputChange={setInputText}
               onSendMessage={handleSendMessage}
               onKeyDown={handleKeyDown}

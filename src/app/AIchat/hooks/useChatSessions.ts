@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ChatSession, ChatMessage } from '../types';
-import { sendMessageToDify } from '../../../lib/dify';
+import { sendMessageToDify, ModeType } from '../../../lib/dify';
 import { chatService } from '../../../lib/chatService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { analyticsService } from '../../../lib/analyticsService';
 
-export const useChatSessions = () => {
+export const useChatSessions = (mode: ModeType = '通常') => {
   const { user } = useAuth();
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string>('');
@@ -160,7 +160,7 @@ export const useChatSessions = () => {
     setIsTyping(true);
 
     try {
-      const difyRes = await sendMessageToDify(userMessage.text);
+      const difyRes = await sendMessageToDify(userMessage.text, mode);
       const aiMessageText = difyRes.answer ?? '（回答が空でした）';
 
       const aiMessage: ChatMessage = {

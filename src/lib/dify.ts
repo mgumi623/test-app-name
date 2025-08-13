@@ -1,9 +1,11 @@
 // lib/dify.ts
-export const sendMessageToDify = async (prompt: string) => {
+export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成';
+
+export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常') => {
   const res = await fetch('/api/dify-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, mode }),
   });
 
   if (!res.ok) {
