@@ -24,7 +24,7 @@ export const DebugInfo: React.FC = () => {
         if (response.status === 500) {
           const errorData = await response.json();
           if (errorData.debug?.availableKeys) {
-            setEnvInfo(prev => ({
+            setEnvInfo((prev: any) => ({
               ...prev,
               DIFY_API_KEY_NORMAL: errorData.debug.availableKeys.normal ? 'EXISTS' : 'MISSING',
               DIFY_API_KEY_CEREBROVASCULAR: errorData.debug.availableKeys.cerebrovascular ? 'EXISTS' : 'MISSING',
