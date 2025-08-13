@@ -19,14 +19,33 @@ function getApiKey(mode: ModeType): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { prompt, mode = '通常' } = await req.json();
-
+  console.log('=== DIFY PROXY API CALL ===');
+  
   try {
+    const { prompt, mode = '通常' } = await req.json();
+    console.log('Request data:', { promptLength: prompt?.length, mode });
+    
     const apiKey = getApiKey(mode as ModeType);
+    console.log('API Key status:', { 
+      mode, 
+      hasKey: !!apiKey, 
+      keyLength: apiKey?.length || 0,
+      keyPrefix: apiKey?.substring(0, 10) || 'NONE'
+    });
     
     if (!apiKey) {
+      console.error('Missing API key for mode:', mode);
       return NextResponse.json({ 
-        error: `API Key not configured for mode: ${mode}` 
+        error: `API Key not configured for mode: ${mode}`,
+        debug: {
+          mode,
+          availableKeys: {
+            normal: !!process.env.DIFY_API_KEY_NORMAL,
+            cerebrovascular: !!process.env.DIFY_API_KEY_CEREBROVASCULAR,
+            infection: !!process.env.DIFY_API_KEY_INFECTION,
+            minutes: !!process.env.DIFY_API_KEY_MINUTES
+          }
+        }
       }, { status: 500 });
     }
 
@@ -54,8 +73,21 @@ export async function POST(req: NextRequest) {
 
     const data = JSON.parse(raw);
     const answer = data.answer ?? '(回答が空でした)';
+    console.log('Dify response successful:', { hasAnswer: !!answer, answerLength: answer.length });
     return NextResponse.json({ answer });
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    console.error('=== DIFY PROXY ERROR ===');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('=== END DIFY PROXY ERROR ===');
+    
+    return NextResponse.json({ 
+      error: String(error),
+      debug: {
+        errorType: typeof error,
+        timestamp: new Date().toISOString()
+      }
+    }, { status: 500 });
   }
 }

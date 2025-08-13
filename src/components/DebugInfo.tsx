@@ -10,16 +10,21 @@ export const DebugInfo: React.FC = () => {
 
   useEffect(() => {
     setEnvInfo({
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'MISSING',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING',
+      DIFY_API_KEY_NORMAL: process.env.DIFY_API_KEY_NORMAL ? 'EXISTS' : 'MISSING',
+      DIFY_API_KEY_CEREBROVASCULAR: process.env.DIFY_API_KEY_CEREBROVASCULAR ? 'EXISTS' : 'MISSING',
+      DIFY_API_KEY_INFECTION: process.env.DIFY_API_KEY_INFECTION ? 'EXISTS' : 'MISSING',
+      DIFY_API_KEY_MINUTES: process.env.DIFY_API_KEY_MINUTES ? 'EXISTS' : 'MISSING',
       NODE_ENV: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
   }, []);
 
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
+  // プロダクションでも表示（デバッグ用）
+  // if (process.env.NODE_ENV === 'production') {
+  //   return null;
+  // }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

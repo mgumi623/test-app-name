@@ -90,7 +90,12 @@ export default function MessageInput({
             onClick={handleTrackedClick('send-message-btn', 'button', onSendMessage)}
             disabled={!inputText.trim() || isTyping}
             size="icon"
-            className="rounded-xl"
+            className="rounded-xl touch-manipulation"
+            style={{ 
+              minHeight: '44px', 
+              minWidth: '44px',
+              WebkitTapHighlightColor: 'transparent'
+            }}
           >
             <Send className="w-5 h-5" />
           </Button>

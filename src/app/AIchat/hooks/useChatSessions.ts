@@ -190,6 +190,30 @@ export const useChatSessions = (mode: ModeType = '通常') => {
       analyticsService.trackChatMessage(aiMessageText.length, false);
     } catch (err) {
       console.error('Dify API error', err);
+      
+      // エラー時のフォールバックメッセージ
+      const errorMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        text: '申し訳ございません。一時的にエラーが発生しました。しばらく待ってから再度お試しください。',
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+
+      // ローカル状態を更新
+      setChatSessions((prev) =>
+        prev.map((chat) =>
+          chat.id === currentChatId
+            ? {
+                ...chat,
+                messages: [...chat.messages, errorMessage],
+                lastMessage: new Date(),
+              }
+            : chat,
+        ),
+      );
+
+      // エラーメッセージもデータベースに保存
+      await chatService.saveMessage(currentChatId, errorMessage.text, 'ai');
     } finally {
       setIsTyping(false);
     }

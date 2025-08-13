@@ -9,6 +9,7 @@ import Header, { ModeType } from './components/Header';
 import MessageList from './components/MessageList';
 import MessageInput from './components/MessageInput';
 import { globalStyles } from './utils/styles';
+import DebugInfo from '../../components/DebugInfo';
 
 const AIChatApp: React.FC = () => {
   const [inputText, setInputText] = useState<string>('');
@@ -120,6 +121,9 @@ const AIChatApp: React.FC = () => {
             />
           </div>
         </div>
+        
+        {/* デバッグ情報 */}
+        <DebugInfo />
       </div>
     </>
   );
