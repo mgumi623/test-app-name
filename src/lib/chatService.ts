@@ -54,7 +54,7 @@ export class ChatService {
         const errorProps = ['message', 'details', 'hint', 'code', 'status', 'statusCode', 'statusText'];
         errorProps.forEach(prop => {
           if (prop in error) {
-            console.error(`Error ${prop}:`, (error as any)[prop]);
+            console.error(`Error ${prop}:`, (error as unknown as Record<string, unknown>)[prop]);
           }
         });
         
@@ -108,7 +108,7 @@ export class ChatService {
         
         // 全プロパティを列挙
         for (const key in error) {
-          console.error(`Error.${key}:`, (error as any)[key]);
+          console.error(`Error.${key}:`, (error as unknown as Record<string, unknown>)[key]);
         }
         
         console.error('Error instanceof Error:', error instanceof Error);
@@ -326,7 +326,7 @@ export class ChatService {
         console.error('Error type:', typeof testError);
         console.error('Error keys:', Object.keys(testError));
         for (const key in testError) {
-          console.error(`testError.${key}:`, (testError as any)[key]);
+          console.error(`testError.${key}:`, (testError as unknown as Record<string, unknown>)[key]);
         }
       } else {
         console.log('Basic query succeeded:', testData);

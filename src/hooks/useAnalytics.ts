@@ -17,7 +17,7 @@ export const useAnalytics = () => {
       analyticsService.trackChatMessage(messageLength, isUser);
     },
     
-    trackFeatureUse: (featureName: string, additionalData?: Record<string, any>) => {
+    trackFeatureUse: (featureName: string, additionalData?: Record<string, unknown>) => {
       const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
       analyticsService.trackFeatureUse(featureName, pagePath, additionalData);
     },

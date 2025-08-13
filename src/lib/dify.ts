@@ -1,5 +1,5 @@
 // lib/dify.ts
-export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成';
+export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成' | '文献検索';
 
 // 再試行機能付きのfetch関数
 const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3): Promise<Response> => {
@@ -42,11 +42,20 @@ export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常
   try {
     // モバイル環境の検出
     const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const timeoutMs = isMobile ? 90000 : 30000; // モバイルは90秒に延長
+    
+    // タイムアウト設定（文献検索モードは5分、他は従来通り）
+    let timeoutMs: number;
+    if (mode === '文献検索') {
+      timeoutMs = 300000; // 5分（300秒）
+    } else {
+      timeoutMs = isMobile ? 90000 : 30000; // モバイルは90秒、デスクトップは30秒
+    }
     
     console.log('Network request starting:', { 
+      mode,
       isMobile, 
       timeoutMs, 
+      timeoutMinutes: timeoutMs / 60000,
       hasAudioFile: !!audioFile,
       userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'server',
       online: typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -88,7 +97,7 @@ export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常
     if (!isMobile || 'AbortController' in window) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('Request timeout, aborting...');
+        console.log(`Request timeout after ${timeoutMs}ms (${timeoutMs / 60000} minutes), aborting...`);
         controller.abort();
       }, timeoutMs);
       
@@ -125,8 +134,16 @@ const handleResponse = async (res: Response) => {
   try {
     if (!res.ok) {
       let errorText = '';
+      let errorData: { error?: string } | null = null;
+      
       try {
         errorText = await res.text();
+        // JSONとして解析を試行
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          // JSONでない場合はテキストとして扱う
+        }
       } catch (e) {
         errorText = 'Failed to read error response';
       }
@@ -135,8 +152,14 @@ const handleResponse = async (res: Response) => {
         status: res.status,
         statusText: res.statusText,
         headers: Object.fromEntries(res.headers.entries()),
-        body: errorText.slice(0, 200)
+        body: errorText.slice(0, 200),
+        errorData
       });
+      
+      // APIキーエラーの場合は特別なメッセージ
+      if (errorData?.error?.includes('API Key not configured')) {
+        throw new Error('APIキーが設定されていません。管理者にお問い合わせください。');
+      }
       
       throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText.slice(0, 100)}`);
     }

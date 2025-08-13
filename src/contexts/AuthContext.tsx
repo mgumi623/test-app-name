@@ -20,7 +20,7 @@ interface UserData {
   role?: string;
   permission?: string;
   job?: string;
-  raw_user_meta_data?: any;
+  raw_user_meta_data?: Record<string, unknown>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

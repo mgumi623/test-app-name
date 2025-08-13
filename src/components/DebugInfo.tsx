@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export const DebugInfo: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [envInfo, setEnvInfo] = useState<any>({});
+  const [envInfo, setEnvInfo] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -24,12 +24,13 @@ export const DebugInfo: React.FC = () => {
         if (response.status === 500) {
           const errorData = await response.json();
           if (errorData.debug?.availableKeys) {
-            setEnvInfo((prev: any) => ({
+            setEnvInfo((prev: Record<string, unknown>) => ({
               ...prev,
               DIFY_API_KEY_NORMAL: errorData.debug.availableKeys.normal ? 'EXISTS' : 'MISSING',
               DIFY_API_KEY_CEREBROVASCULAR: errorData.debug.availableKeys.cerebrovascular ? 'EXISTS' : 'MISSING',
               DIFY_API_KEY_INFECTION: errorData.debug.availableKeys.infection ? 'EXISTS' : 'MISSING',
               DIFY_API_KEY_MINUTES: errorData.debug.availableKeys.minutes ? 'EXISTS' : 'MISSING',
+              DIFY_API_KEY_LITERATURE: errorData.debug.availableKeys.literature ? 'EXISTS' : 'MISSING',
             }));
           }
         }
@@ -45,10 +46,11 @@ export const DebugInfo: React.FC = () => {
       DIFY_API_KEY_CEREBROVASCULAR: 'CHECKING...',
       DIFY_API_KEY_INFECTION: 'CHECKING...',
       DIFY_API_KEY_MINUTES: 'CHECKING...',
+      DIFY_API_KEY_LITERATURE: 'CHECKING...',
       NODE_ENV: process.env.NODE_ENV,
       isMobile: isMobile ? 'YES' : 'NO',
       userAgent: navigator.userAgent.slice(0, 50) + '...',
-      connection: (navigator as any).connection?.effectiveType || 'unknown',
+      connection: (navigator as Navigator & { connection?: { effectiveType?: string } }).connection?.effectiveType || 'unknown',
       timestamp: new Date().toISOString(),
     });
     

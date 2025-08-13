@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logApiKeyStatus } from '../../../utils/envCheck';
 
-type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成';
+type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成' | '文献検索';
 
 // モードに対応するAPI Keyを取得する関数
 function getApiKey(mode: ModeType): string {
@@ -13,6 +14,8 @@ function getApiKey(mode: ModeType): string {
       return process.env.DIFY_API_KEY_INFECTION || '';
     case '議事録作成':
       return process.env.DIFY_API_KEY_MINUTES || '';
+    case '文献検索':
+      return process.env.DIFY_API_KEY_LITERATURE || '';
     default:
       return process.env.DIFY_API_KEY_NORMAL || '';
   }
@@ -21,11 +24,15 @@ function getApiKey(mode: ModeType): string {
 export async function POST(req: NextRequest) {
   console.log('=== DIFY PROXY API CALL ===');
   
+  // 環境変数の設定状況をログ出力
+  logApiKeyStatus();
+  
   // 変数をtry文の外で宣言
-  let requestData: any;
+  let requestData: { prompt?: string; mode?: string } | null = null;
   let audioFile: File | null = null;
   let mode: string = '通常';
   let prompt: string = '';
+  let timeoutId: NodeJS.Timeout | null = null;
   
   try {
     // リクエストヘッダーから情報を取得
@@ -67,13 +74,14 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-    } else {
-      // JSONの場合（テキストのみ）
-      try {
-        requestData = await req.json();
-        prompt = requestData.prompt;
-        mode = requestData.mode || '通常';
-      } catch (error) {
+          } else {
+        // JSONの場合（テキストのみ）
+        try {
+          const jsonData = await req.json();
+          requestData = jsonData;
+          prompt = jsonData.prompt || '';
+          mode = jsonData.mode || '通常';
+        } catch (error) {
         console.error('Failed to parse request JSON:', error);
         return NextResponse.json(
           { error: 'Invalid JSON in request body' }, 
@@ -88,11 +96,38 @@ export async function POST(req: NextRequest) {
       mode, 
       hasKey: !!apiKey, 
       keyLength: apiKey?.length || 0,
-      keyPrefix: apiKey?.substring(0, 10) || 'NONE'
+      keyPrefix: apiKey?.substring(0, 10) || 'NONE',
+      allEnvVars: {
+        DIFY_API_KEY_NORMAL: !!process.env.DIFY_API_KEY_NORMAL,
+        DIFY_API_KEY_CEREBROVASCULAR: !!process.env.DIFY_API_KEY_CEREBROVASCULAR,
+        DIFY_API_KEY_INFECTION: !!process.env.DIFY_API_KEY_INFECTION,
+        DIFY_API_KEY_MINUTES: !!process.env.DIFY_API_KEY_MINUTES,
+        DIFY_API_KEY_LITERATURE: !!process.env.DIFY_API_KEY_LITERATURE
+      }
     });
     
     if (!apiKey) {
       console.error('Missing API key for mode:', mode);
+      
+      // 開発環境での一時的なモックレスポンス
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Development mode: returning mock response');
+        return NextResponse.json({ 
+          answer: `[開発モード] ${mode}モードのAPIキーが設定されていません。実際のAPIキーを設定するか、本番環境でテストしてください。\n\n設定が必要な環境変数: DIFY_API_KEY_${mode.toUpperCase().replace(' ', '_')}`,
+          debug: {
+            mode,
+            availableKeys: {
+              normal: !!process.env.DIFY_API_KEY_NORMAL,
+              cerebrovascular: !!process.env.DIFY_API_KEY_CEREBROVASCULAR,
+              infection: !!process.env.DIFY_API_KEY_INFECTION,
+              minutes: !!process.env.DIFY_API_KEY_MINUTES,
+              literature: !!process.env.DIFY_API_KEY_LITERATURE
+            },
+            message: '環境変数にAPIキーが設定されていません。.env.localファイルにDify APIキーを設定してください。'
+          }
+        });
+      }
+      
       return NextResponse.json({ 
         error: `API Key not configured for mode: ${mode}`,
         debug: {
@@ -101,12 +136,22 @@ export async function POST(req: NextRequest) {
             normal: !!process.env.DIFY_API_KEY_NORMAL,
             cerebrovascular: !!process.env.DIFY_API_KEY_CEREBROVASCULAR,
             infection: !!process.env.DIFY_API_KEY_INFECTION,
-            minutes: !!process.env.DIFY_API_KEY_MINUTES
-          }
+            minutes: !!process.env.DIFY_API_KEY_MINUTES,
+            literature: !!process.env.DIFY_API_KEY_LITERATURE
+          },
+          message: '環境変数にAPIキーが設定されていません。.env.localファイルにDify APIキーを設定してください。'
         }
       }, { status: 500 });
     }
 
+    // タイムアウト設定（文献検索モードは5分、他は従来通り）
+    const timeoutMs = mode === '文献検索' ? 300000 : 120000; // 文献検索は5分、他は2分
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => {
+      console.log(`Request timeout after ${timeoutMs}ms (${timeoutMs / 60000} minutes) for mode: ${mode}`);
+      controller.abort();
+    }, timeoutMs);
+    
     let res;
     
     if (audioFile) {
@@ -114,75 +159,33 @@ export async function POST(req: NextRequest) {
       console.log('Processing audio file with Dify...');
       
       if (mode === '議事録作成') {
-        // 議事録作成モード：ワークフローAPIを使用
+        // 議事録作成モード：ワークフローAPIを使用（ファイルを直接送信）
         console.log('Using workflow API for minutes creation...');
         
-        // 新しいアプローチ：ワークフローAPIを正しい形式で呼び出し
+        // ワークフローAPIでファイルを直接送信（FormData形式）
+        const workflowFormData = new FormData();
+        workflowFormData.append('audio', audioFile);  // ファイルを直接添付
+        workflowFormData.append('response_mode', 'blocking');
+        workflowFormData.append('user', isMobileRequest ? 'mobile-user' : 'desktop-user');
+        
         const workflowHeaders = {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
           ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+          // Content-Typeは自動設定される（multipart/form-data）
         };
         
-        // ワークフローの場合、ファイルは別途アップロードする必要がある
-        // Step 1: ファイルアップロード
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', audioFile);
-        uploadFormData.append('user', isMobileRequest ? 'mobile-user' : 'desktop-user');
-        
-        const uploadHeaders = {
-          Authorization: `Bearer ${apiKey}`,
-          ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
-        };
-        
-        console.log('Uploading file to Dify for workflow...', {
+        console.log('Making Dify workflow API call with FormData...', {
+          url: 'https://api.dify.ai/v1/workflows/run',
           audioFileName: audioFile.name,
           audioFileSize: audioFile.size,
           audioFileType: audioFile.type
         });
         
-        const uploadRes = await fetch('https://api.dify.ai/v1/files/upload', {
-          method: 'POST',
-          headers: uploadHeaders,
-          body: uploadFormData,
-        });
-        
-        if (!uploadRes.ok) {
-          const uploadError = await uploadRes.text();
-          console.error('File upload failed:', {
-            status: uploadRes.status,
-            statusText: uploadRes.statusText,
-            error: uploadError
-          });
-          throw new Error(`File upload failed: ${uploadRes.status} - ${uploadError}`);
-        }
-        
-        const uploadResult = await uploadRes.json();
-        console.log('File upload successful:', {
-          id: uploadResult.id,
-          name: uploadResult.name,
-          size: uploadResult.size
-        });
-        
-        // Step 2: ワークフロー実行（ファイルIDを文字列として送信）
-        const workflowBody = {
-          inputs: {
-            "audio": uploadResult.id
-          },
-          response_mode: 'blocking',
-          user: isMobileRequest ? 'mobile-user' : 'desktop-user'
-        };
-        
-        console.log('Making Dify workflow API call...', {
-          url: 'https://api.dify.ai/v1/workflows/run',
-          fileId: uploadResult.id,
-          workflowBody: JSON.stringify(workflowBody)
-        });
-        
         res = await fetch('https://api.dify.ai/v1/workflows/run', {
           method: 'POST',
           headers: workflowHeaders,
-          body: JSON.stringify(workflowBody),
+          body: workflowFormData,
+          signal: controller.signal,
         });
       } else {
         // 他のモード：従来のチャットAPI
@@ -203,6 +206,7 @@ export async function POST(req: NextRequest) {
           method: 'POST',
           headers: uploadHeaders,
           body: uploadFormData,
+          signal: controller.signal,
         });
         
         if (!uploadRes.ok) {
@@ -240,6 +244,7 @@ export async function POST(req: NextRequest) {
           method: 'POST',
           headers: difyHeaders,
           body: JSON.stringify(difyBody),
+          signal: controller.signal,
         });
       }
     } else {
@@ -266,14 +271,22 @@ export async function POST(req: NextRequest) {
       console.log('Making Dify API call (text only)...', {
         url: 'https://api.dify.ai/v1/chat-messages',
         bodySize: JSON.stringify(difyBody).length,
-        isMobile: isMobileRequest
+        isMobile: isMobileRequest,
+        mode: mode,
+        timeoutMs: timeoutMs
       });
       
       res = await fetch('https://api.dify.ai/v1/chat-messages', {
         method: 'POST',
         headers: difyHeaders,
         body: JSON.stringify(difyBody),
+        signal: controller.signal,
       });
+    }
+    
+    // タイムアウトをクリア
+    if (timeoutId) {
+      clearTimeout(timeoutId);
     }
 
     const raw = await res.text();
@@ -324,6 +337,11 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json({ answer });
   } catch (error) {
+    // エラー時もタイムアウトをクリア
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
     console.error('=== DIFY PROXY ERROR ===');
     console.error('Error type:', typeof error);
     console.error('Error message:', error instanceof Error ? error.message : String(error));

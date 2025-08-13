@@ -36,7 +36,7 @@ export interface AnalyticsEvent {
   page_path?: string;
   element_id?: string;
   element_type?: string;
-  event_data?: Record<string, any>;
+  event_data?: Record<string, unknown>;
 }
 
 export interface AnalyticsError {
@@ -274,7 +274,7 @@ class AnalyticsService {
     });
   }
 
-  async trackFeatureUse(featureName: string, pagePath: string, additionalData?: Record<string, any>) {
+  async trackFeatureUse(featureName: string, pagePath: string, additionalData?: Record<string, unknown>) {
     if (typeof window === 'undefined') return;
     
     await this.ensureInitialized();

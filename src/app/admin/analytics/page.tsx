@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 // シンプルなチャート代替コンポーネント
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SimpleChart = ({ data, type }: { data: any[]; type: string }) => (
   <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
     <div className="text-center">
@@ -19,8 +20,11 @@ import { Card } from '@/components/ui/card';
 import { analyticsService } from '../../../lib/analyticsService';
 
 interface AnalyticsData {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sessions: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   events: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errors: any[];
 }
 

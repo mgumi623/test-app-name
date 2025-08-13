@@ -2,7 +2,7 @@ import { Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useRef, useEffect } from 'react';
 
-export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成';
+export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成' | '文献検索';
 
 interface HeaderProps {
   isSidebarOpen: boolean;
@@ -15,7 +15,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar, selectedMode = 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const modes: ModeType[] = ['通常', '脳血管', '感染マニュアル', '議事録作成'];
+  const modes: ModeType[] = ['通常', '脳血管', '感染マニュアル', '議事録作成', '文献検索'];
 
   // ドロップダウン外をクリックした時に閉じる
   useEffect(() => {

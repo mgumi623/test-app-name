@@ -70,13 +70,13 @@ export const checkNetworkStatus = (): Promise<boolean> => {
 };
 
 // エラーの種類を判定
-export const categorizeError = (error: any) => {
+export const categorizeError = (error: unknown) => {
   if (!error) return 'unknown';
   
   const errorString = String(error).toLowerCase();
-  const errorMessage = error.message?.toLowerCase() || '';
+  const errorMessage = (error as Error)?.message?.toLowerCase() || '';
   
-  if (error.name === 'AbortError' || errorString.includes('abort')) {
+  if ((error as Error)?.name === 'AbortError' || errorString.includes('abort')) {
     return 'timeout';
   }
   

@@ -53,3 +53,61 @@ export function checkEnvironmentVariables() {
     allPresent: hasSupabaseUrl && hasSupabaseKey
   };
 }
+
+// 環境変数の設定状況を確認するユーティリティ
+
+export const checkDifyApiKeys = () => {
+  const keys = {
+    normal: process.env.DIFY_API_KEY_NORMAL,
+    cerebrovascular: process.env.DIFY_API_KEY_CEREBROVASCULAR,
+    infection: process.env.DIFY_API_KEY_INFECTION,
+    minutes: process.env.DIFY_API_KEY_MINUTES,
+    literature: process.env.DIFY_API_KEY_LITERATURE
+  };
+
+  const status = {
+    configured: Object.values(keys).filter(key => !!key).length,
+    total: Object.keys(keys).length,
+    missing: Object.entries(keys).filter(([name, key]) => !key).map(([name]) => name),
+    available: Object.entries(keys).filter(([name, key]) => !!key).map(([name]) => name)
+  };
+
+  return {
+    keys,
+    status,
+    isConfigured: status.configured > 0,
+    isFullyConfigured: status.configured === status.total
+  };
+};
+
+export const getMissingApiKeys = () => {
+  const check = checkDifyApiKeys();
+  return check.status.missing;
+};
+
+export const logApiKeyStatus = () => {
+  const check = checkDifyApiKeys();
+  console.log('Dify API Keys Status:', {
+    configured: check.status.configured,
+    total: check.status.total,
+    missing: check.status.missing,
+    available: check.status.available,
+    isConfigured: check.isConfigured,
+    isFullyConfigured: check.isFullyConfigured
+  });
+  
+  if (!check.isConfigured) {
+    console.error('❌ No Dify API keys configured!');
+    console.error('Please set the following environment variables:');
+    check.status.missing.forEach(key => {
+      console.error(`  - DIFY_API_KEY_${key.toUpperCase()}`);
+    });
+  } else if (!check.isFullyConfigured) {
+    console.warn('⚠️ Some Dify API keys are missing:');
+    check.status.missing.forEach(key => {
+      console.warn(`  - DIFY_API_KEY_${key.toUpperCase()}`);
+    });
+  } else {
+    console.log('✅ All Dify API keys are configured');
+  }
+};
