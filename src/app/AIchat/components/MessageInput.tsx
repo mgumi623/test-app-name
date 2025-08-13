@@ -60,7 +60,7 @@ export default function MessageInput({
   };
 
   return (
-    <div className="bg-transparent border-t border-gray-200 p-4 sm:p-6 w-full">
+    <div className="bg-transparent p-4 sm:p-6 w-full">
       <div className="max-w-4xl mx-auto space-y-3">
         {/* 音声アップロード（議事録作成モードの場合のみ表示） */}
         {isMinutesMode && (

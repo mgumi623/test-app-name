@@ -31,8 +31,8 @@ export default function Header({ isSidebarOpen, onToggleSidebar, selectedMode = 
     };
   }, []);
   return (
-    <div className="z-10 w-full backdrop-blur-sm bg-white/60 border-b border-gray-200 p-4 sm:p-6">
-      <div className="flex items-center space-x-4 animate-fade-in">
+    <div className="z-10 w-full backdrop-blur-sm bg-white/60 border-b border-gray-200 p-3 sm:p-4">
+      <div className="flex items-center space-x-3 animate-fade-in">
         <Button
           variant="ghost"
           size="icon"
@@ -49,16 +49,16 @@ export default function Header({ isSidebarOpen, onToggleSidebar, selectedMode = 
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center space-x-3 hover:bg-gray-50 rounded-lg p-2 transition-colors"
+            className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-1.5 transition-colors"
           >
-            <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full shadow-lg">
-              <img src="/image/clover.svg" alt="Clover Logo" className="w-6 h-6" />
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg">
+              <img src="/image/clover.svg" alt="Clover Logo" className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900">
                 AI Assistant
               </h1>
-              <p className="text-sm text-gray-600">{selectedMode}モード</p>
+              <p className="text-xs sm:text-sm text-gray-600">{selectedMode}モード</p>
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
           </button>

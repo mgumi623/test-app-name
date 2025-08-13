@@ -22,7 +22,30 @@ export async function POST(req: NextRequest) {
   console.log('=== DIFY PROXY API CALL ===');
   
   try {
-    const { prompt, mode = '通常' } = await req.json();
+    // リクエストヘッダーから情報を取得
+    const userAgent = req.headers.get('user-agent') || '';
+    const isMobileRequest = req.headers.get('x-mobile-request') === 'true' || 
+                           /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    
+    console.log('Request info:', {
+      userAgent: userAgent.slice(0, 100),
+      isMobile: isMobileRequest,
+      contentType: req.headers.get('content-type'),
+      origin: req.headers.get('origin')
+    });
+    
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Failed to parse request JSON:', error);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' }, 
+        { status: 400 }
+      );
+    }
+    
+    const { prompt, mode = '通常' } = requestData;
     console.log('Request data:', { promptLength: prompt?.length, mode });
     
     const apiKey = getApiKey(mode as ModeType);
@@ -49,19 +72,30 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
+    // モバイル向けのDify API呼び出し設定
+    const difyHeaders = {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+    };
+    
+    const difyBody = {
+      query: prompt,
+      inputs: {},
+      response_mode: 'blocking',
+      user: isMobileRequest ? 'mobile-user' : 'desktop-user',
+    };
+    
+    console.log('Making Dify API call...', {
+      url: 'https://api.dify.ai/v1/chat-messages',
+      bodySize: JSON.stringify(difyBody).length,
+      isMobile: isMobileRequest
+    });
+    
     const res = await fetch('https://api.dify.ai/v1/chat-messages', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        // ✅ query をトップレベルに
-        query: prompt,
-        inputs: {},                 // 追加フィールドを定義していなければ空で OK
-        response_mode: 'blocking',  // すぐ返す
-        user: 'user-001',
-      }),
+      headers: difyHeaders,
+      body: JSON.stringify(difyBody),
     });
 
     const raw = await res.text();
