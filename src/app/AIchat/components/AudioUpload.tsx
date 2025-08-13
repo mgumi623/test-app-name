@@ -63,7 +63,7 @@ export default function AudioUpload({
     const fileExtension = file.name.toLowerCase().split('.').pop();
     const audioExtensions = ['mp3', 'wav', 'm4a', 'ogg', 'webm'];
     
-    return audioTypes.includes(file.type) || (fileExtension && audioExtensions.includes(fileExtension));
+    return audioTypes.includes(file.type) || (!!fileExtension && audioExtensions.includes(fileExtension));
   };
 
   const formatFileSize = (bytes: number): string => {
