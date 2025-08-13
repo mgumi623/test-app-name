@@ -123,12 +123,20 @@ export const useChatSessions = (mode: ModeType = '通常') => {
     }
   };
 
-  const sendMessage = async (inputText: string) => {
-    if (!inputText.trim() || !currentChatId) return;
+  const sendMessage = async (inputText: string, audioFile?: File) => {
+    if ((!inputText.trim() && !audioFile) || !currentChatId) return;
+
+    // ユーザーメッセージのテキスト作成
+    let messageText = inputText.trim();
+    if (audioFile && !messageText) {
+      messageText = `音声ファイル「${audioFile.name}」を分析してください。`;
+    } else if (audioFile && messageText) {
+      messageText = `${messageText}\n\n[音声ファイル: ${audioFile.name}]`;
+    }
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
-      text: inputText.trim(),
+      text: messageText,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -180,10 +188,15 @@ export const useChatSessions = (mode: ModeType = '通常') => {
       console.log('Starting Dify API call for message:', { 
         mode, 
         messageLength: userMessage.text.length,
+        hasAudioFile: !!audioFile,
         mobileInfo
       });
       
-      const difyRes = await sendMessageToDify(userMessage.text, mode);
+      const difyRes = await sendMessageToDify(
+        audioFile ? inputText.trim() || '音声ファイルを分析してください。' : userMessage.text, 
+        mode, 
+        audioFile
+      );
       console.log('Dify API call completed successfully');
       const aiMessageText = difyRes.answer ?? '（回答が空でした）';
 

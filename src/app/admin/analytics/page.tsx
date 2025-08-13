@@ -3,158 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
-// 視覚的なチャートコンポーネント
-const VisualChart = ({ data, type, title }: { data: any[]; type: string; title?: string }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📊</div>
-          <p className="text-gray-600 font-medium">データがありません</p>
-          <p className="text-sm text-gray-500">分析データを収集中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (type === 'line') {
-    const maxSessions = Math.max(...data.map(item => item.sessions || 0));
-    const maxPageViews = Math.max(...data.map(item => item.pageViews || 0));
-    const maxValue = Math.max(maxSessions, maxPageViews);
-
-    return (
-      <div className="h-64 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border">
-        <div className="h-full flex flex-col">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
-            <div className="flex space-x-4 text-xs">
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>セッション</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>ページビュー</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 flex items-end space-x-1 relative">
-            {/* グリッドライン */}
-            <div className="absolute inset-0 flex flex-col justify-between opacity-20">
-              {[0, 25, 50, 75, 100].map(line => (
-                <div key={line} className="border-t border-gray-400"></div>
-              ))}
-            </div>
-            
-            {data.slice(0, 7).map((item, index) => {
-              const sessionHeight = maxValue > 0 ? Math.max((item.sessions / maxValue) * 120, item.sessions > 0 ? 12 : 4) : 4;
-              const pageViewHeight = maxValue > 0 ? Math.max((item.pageViews / maxValue) * 120, item.pageViews > 0 ? 12 : 4) : 4;
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center space-y-2 relative z-10">
-                  <div className="flex justify-center space-x-1 items-end h-32">
-                    <div className="flex flex-col items-center">
-                      <div 
-                        className="w-4 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t shadow-sm transition-all duration-700 ease-out"
-                        style={{ height: `${sessionHeight}px` }}
-                        title={`セッション: ${item.sessions}`}
-                      ></div>
-                      <span className="text-xs text-blue-600 font-medium mt-1">{item.sessions}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <div 
-                        className="w-4 bg-gradient-to-t from-green-600 to-green-400 rounded-t shadow-sm transition-all duration-700 ease-out"
-                        style={{ height: `${pageViewHeight}px` }}
-                        title={`ページビュー: ${item.pageViews}`}
-                      ></div>
-                      <span className="text-xs text-green-600 font-medium mt-1">{item.pageViews}</span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-600 font-medium text-center">
-                    {item.date}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (type === 'pie') {
-    const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
-    const colors = [
-      { bg: 'bg-blue-500', name: 'blue' },
-      { bg: 'bg-purple-500', name: 'purple' },
-      { bg: 'bg-green-500', name: 'green' },
-      { bg: 'bg-yellow-500', name: 'yellow' },
-      { bg: 'bg-red-500', name: 'red' }
-    ];
-    
-    return (
-      <div className="h-64 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border">
-        <div className="h-full flex">
-          {/* 棒グラフ風の表示（円グラフの代替） */}
-          <div className="w-32 flex flex-col justify-end space-y-1 mx-auto my-auto">
-            {data.slice(0, 5).map((item, index) => {
-              const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
-              const height = percentage > 0 ? Math.max(percentage * 0.8, 8) : 4;
-              const color = colors[index % colors.length];
-              return (
-                <div key={index} className="flex items-center space-x-2">
-                  <div className="w-16 bg-gray-200 rounded-full h-6 relative overflow-hidden">
-                    <div 
-                      className={`h-full ${color.bg} rounded-full transition-all duration-700 ease-out`}
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs w-8 text-right font-medium">{percentage}%</span>
-                </div>
-              );
-            })}
-            {/* 合計表示 */}
-            <div className="mt-2 text-center">
-              <div className="text-lg font-bold text-gray-800 bg-white rounded-lg px-2 py-1 border">
-                {total}
-              </div>
-              <div className="text-xs text-gray-600">合計</div>
-            </div>
-          </div>
-          
-          {/* 凡例 */}
-          <div className="flex-1 flex flex-col justify-center space-y-2 ml-4">
-            {data.slice(0, 5).map((item, index) => {
-              const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
-              const color = colors[index % colors.length];
-              return (
-                <div key={index} className="flex items-center space-x-3 bg-white rounded-lg p-2 shadow-sm">
-                  <div className={`w-4 h-4 rounded-full ${color.bg}`}></div>
-                  <span className="text-sm text-gray-700 flex-1 font-medium">
-                    {item.name || item.device || item.permission}
-                  </span>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-gray-800">{item.count}</div>
-                    <div className="text-xs text-gray-500">{percentage}%</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-center h-64 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-300">
-      <div className="text-center">
-        <div className="text-5xl mb-4">📈</div>
-        <p className="text-gray-600 font-medium">Chart ({type})</p>
-        <p className="text-sm text-gray-500">{data?.length || 0} データポイント</p>
-      </div>
+// シンプルなチャート代替コンポーネント
+const SimpleChart = ({ data, type }: { data: any[]; type: string }) => (
+  <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+    <div className="text-center">
+      <div className="text-4xl mb-2">📊</div>
+      <p className="text-gray-600">Chart ({type})</p>
+      <p className="text-sm text-gray-500">{data?.length || 0} data points</p>
     </div>
-  );
-};
+  </div>
+);
 import { Calendar, Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -340,6 +198,7 @@ export default function AnalyticsDashboard() {
           ? (e.page_path || 'unknown')
           : (e.event_data?.feature_name || 'unknown');
         
+          
         const existing = acc.find((item: { permission: string; feature: string; count: number }) => 
           item.permission === permission && item.feature === feature
         );
@@ -468,17 +327,13 @@ export default function AnalyticsDashboard() {
           {/* Daily Activity Chart */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">日別アクティビティ</h3>
-            <VisualChart data={stats?.dailyActivity || []} type="line" title="日別アクティビティ" />
+            <SimpleChart data={stats?.dailyActivity || []} type="line" />
           </Card>
 
           {/* Device Breakdown */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">デバイス別利用状況</h3>
-            <VisualChart 
-              data={stats?.deviceBreakdown?.map(item => ({ name: item.device, count: item.count })) || []} 
-              type="pie"
-              title="デバイス別利用状況"
-            />
+            <SimpleChart data={stats?.deviceBreakdown || []} type="pie" />
           </Card>
         </div>
 
@@ -487,11 +342,7 @@ export default function AnalyticsDashboard() {
           {/* Permission Breakdown */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">役職別利用状況</h3>
-            <VisualChart 
-              data={stats?.permissionBreakdown?.map(item => ({ name: item.permission, count: item.count })) || []}
-              type="pie"
-              title="役職別利用状況"
-            />
+            <SimpleChart data={stats?.permissionBreakdown || []} type="pie" />
           </Card>
 
           {/* Permission Feature Usage */}

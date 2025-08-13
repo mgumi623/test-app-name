@@ -80,22 +80,17 @@ export default function AudioUpload({
 
   if (selectedFile) {
     return (
-      <div className="flex items-center space-x-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-        <File className="w-4 h-4 text-blue-600" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-blue-800 truncate">{selectedFile.name}</p>
-          <p className="text-xs text-blue-600">{formatFileSize(selectedFile.size)}</p>
-        </div>
-        <Button
+      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
+        <File className="w-2.5 h-2.5 text-blue-600 flex-shrink-0" />
+        <span className="text-blue-800 truncate flex-1 text-xs">{selectedFile.name}</span>
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
           onClick={onFileRemove}
-          className="w-6 h-6 text-blue-600 hover:text-blue-800"
+          className="w-3 h-3 flex items-center justify-center text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded"
           disabled={disabled}
         >
-          <X className="w-4 h-4" />
-        </Button>
+          <X className="w-2 h-2" />
+        </button>
       </div>
     );
   }
@@ -103,7 +98,7 @@ export default function AudioUpload({
   return (
     <div
       className={`
-        relative border-2 border-dashed rounded-lg transition-colors cursor-pointer
+        relative border border-dashed rounded transition-colors cursor-pointer py-0.5 px-1.5
         ${dragActive 
           ? 'border-blue-400 bg-blue-50' 
           : 'border-gray-300 hover:border-gray-400'
@@ -125,17 +120,9 @@ export default function AudioUpload({
         disabled={disabled}
       />
       
-      <div className="flex flex-col items-center justify-center p-4 text-center">
-        <div className="flex items-center space-x-2 mb-2">
-          <Mic className="w-5 h-5 text-gray-500" />
-          <Upload className="w-5 h-5 text-gray-500" />
-        </div>
-        <p className="text-sm text-gray-600 mb-1">
-          音声ファイルをドロップまたはクリックして選択
-        </p>
-        <p className="text-xs text-gray-500">
-          対応形式: MP3, WAV, M4A, OGG
-        </p>
+      <div className="flex items-center space-x-1 text-xs">
+        <Mic className="w-2.5 h-2.5 text-gray-500" />
+        <span className="text-gray-600 text-xs">音声選択</span>
       </div>
     </div>
   );

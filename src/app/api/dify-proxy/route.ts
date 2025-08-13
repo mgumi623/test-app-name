@@ -21,6 +21,12 @@ function getApiKey(mode: ModeType): string {
 export async function POST(req: NextRequest) {
   console.log('=== DIFY PROXY API CALL ===');
   
+  // 変数をtry文の外で宣言
+  let requestData: any;
+  let audioFile: File | null = null;
+  let mode: string = '通常';
+  let prompt: string = '';
+  
   try {
     // リクエストヘッダーから情報を取得
     const userAgent = req.headers.get('user-agent') || '';
@@ -34,18 +40,47 @@ export async function POST(req: NextRequest) {
       origin: req.headers.get('origin')
     });
     
-    let requestData;
-    try {
-      requestData = await req.json();
-    } catch (error) {
-      console.error('Failed to parse request JSON:', error);
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' }, 
-        { status: 400 }
-      );
-    }
+    // Content-Type確認してリクエストを適切に処理
+    const contentType = req.headers.get('content-type') || '';
     
-    const { prompt, mode = '通常' } = requestData;
+    if (contentType.includes('multipart/form-data')) {
+      // FormDataの場合（音声ファイル付き）
+      try {
+        const formData = await req.formData();
+        prompt = formData.get('prompt') as string;
+        mode = formData.get('mode') as string || '通常';
+        const audioFileEntry = formData.get('audioFile') as File;
+        
+        requestData = { prompt, mode };
+        audioFile = audioFileEntry;
+        
+        console.log('FormData received:', {
+          hasPrompt: !!prompt,
+          hasAudioFile: !!audioFile,
+          audioFileName: audioFile?.name,
+          audioFileSize: audioFile?.size
+        });
+      } catch (error) {
+        console.error('Failed to parse FormData:', error);
+        return NextResponse.json(
+          { error: 'Invalid FormData in request body' }, 
+          { status: 400 }
+        );
+      }
+    } else {
+      // JSONの場合（テキストのみ）
+      try {
+        requestData = await req.json();
+        prompt = requestData.prompt;
+        mode = requestData.mode || '通常';
+      } catch (error) {
+        console.error('Failed to parse request JSON:', error);
+        return NextResponse.json(
+          { error: 'Invalid JSON in request body' }, 
+          { status: 400 }
+        );
+      }
+    }
     console.log('Request data:', { promptLength: prompt?.length, mode });
     
     const apiKey = getApiKey(mode as ModeType);
@@ -72,54 +107,257 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // モバイル向けのDify API呼び出し設定
-    const difyHeaders = {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
-    };
+    let res;
     
-    const difyBody = {
-      query: prompt,
-      inputs: {},
-      response_mode: 'blocking',
-      user: isMobileRequest ? 'mobile-user' : 'desktop-user',
-    };
-    
-    console.log('Making Dify API call...', {
-      url: 'https://api.dify.ai/v1/chat-messages',
-      bodySize: JSON.stringify(difyBody).length,
-      isMobile: isMobileRequest
-    });
-    
-    const res = await fetch('https://api.dify.ai/v1/chat-messages', {
-      method: 'POST',
-      headers: difyHeaders,
-      body: JSON.stringify(difyBody),
-    });
+    if (audioFile) {
+      // 音声ファイルがある場合：議事録作成モードはワークフロー、他はチャット
+      console.log('Processing audio file with Dify...');
+      
+      if (mode === '議事録作成') {
+        // 議事録作成モード：ワークフローAPIを使用
+        console.log('Using workflow API for minutes creation...');
+        
+        // 新しいアプローチ：ワークフローAPIを正しい形式で呼び出し
+        const workflowHeaders = {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+        };
+        
+        // ワークフローの場合、ファイルは別途アップロードする必要がある
+        // Step 1: ファイルアップロード
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', audioFile);
+        uploadFormData.append('user', isMobileRequest ? 'mobile-user' : 'desktop-user');
+        
+        const uploadHeaders = {
+          Authorization: `Bearer ${apiKey}`,
+          ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+        };
+        
+        console.log('Uploading file to Dify for workflow...', {
+          audioFileName: audioFile.name,
+          audioFileSize: audioFile.size,
+          audioFileType: audioFile.type
+        });
+        
+        const uploadRes = await fetch('https://api.dify.ai/v1/files/upload', {
+          method: 'POST',
+          headers: uploadHeaders,
+          body: uploadFormData,
+        });
+        
+        if (!uploadRes.ok) {
+          const uploadError = await uploadRes.text();
+          console.error('File upload failed:', {
+            status: uploadRes.status,
+            statusText: uploadRes.statusText,
+            error: uploadError
+          });
+          throw new Error(`File upload failed: ${uploadRes.status} - ${uploadError}`);
+        }
+        
+        const uploadResult = await uploadRes.json();
+        console.log('File upload successful:', {
+          id: uploadResult.id,
+          name: uploadResult.name,
+          size: uploadResult.size
+        });
+        
+        // Step 2: ワークフロー実行（ファイルIDを文字列として送信）
+        const workflowBody = {
+          inputs: {
+            "audio": uploadResult.id
+          },
+          response_mode: 'blocking',
+          user: isMobileRequest ? 'mobile-user' : 'desktop-user'
+        };
+        
+        console.log('Making Dify workflow API call...', {
+          url: 'https://api.dify.ai/v1/workflows/run',
+          fileId: uploadResult.id,
+          workflowBody: JSON.stringify(workflowBody)
+        });
+        
+        res = await fetch('https://api.dify.ai/v1/workflows/run', {
+          method: 'POST',
+          headers: workflowHeaders,
+          body: JSON.stringify(workflowBody),
+        });
+      } else {
+        // 他のモード：従来のチャットAPI
+        console.log('Using chat API for other modes...');
+        
+        // Step 1: ファイルアップロード
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', audioFile);
+        uploadFormData.append('user', isMobileRequest ? 'mobile-user' : 'desktop-user');
+        uploadFormData.append('source', 'api');
+        
+        const uploadHeaders = {
+          Authorization: `Bearer ${apiKey}`,
+          ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+        };
+        
+        const uploadRes = await fetch('https://api.dify.ai/v1/files/upload', {
+          method: 'POST',
+          headers: uploadHeaders,
+          body: uploadFormData,
+        });
+        
+        if (!uploadRes.ok) {
+          const uploadError = await uploadRes.text();
+          console.error('File upload failed:', {
+            status: uploadRes.status,
+            statusText: uploadRes.statusText,
+            error: uploadError
+          });
+          throw new Error(`File upload failed: ${uploadRes.status} - ${uploadError}`);
+        }
+        
+        const uploadResult = await uploadRes.json();
+        console.log('File upload successful for chat API:', {
+          id: uploadResult.id,
+          name: uploadResult.name
+        });
+        
+        // Step 2: チャットAPIでファイルを処理
+        const difyHeaders = {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+        };
+        
+        const difyBody = {
+          inputs: {
+            voice: uploadResult.id
+          },
+          response_mode: 'blocking',
+          user: isMobileRequest ? 'mobile-user' : 'desktop-user'
+        };
+        
+        res = await fetch('https://api.dify.ai/v1/chat-messages', {
+          method: 'POST',
+          headers: difyHeaders,
+          body: JSON.stringify(difyBody),
+        });
+      }
+    } else {
+      // テキストのみの場合
+      // 議事録作成モードは音声ファイルが必須
+      if (mode === '議事録作成') {
+        throw new Error('議事録作成モードでは音声ファイルが必要です。音声ファイルをアップロードしてください。');
+      }
+      
+      // 他のモード：従来通りJSON
+      const difyHeaders = {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...(isMobileRequest && { 'X-Request-Source': 'mobile' })
+      };
+      
+      const difyBody = {
+        query: prompt,
+        inputs: {},
+        response_mode: 'blocking',
+        user: isMobileRequest ? 'mobile-user' : 'desktop-user',
+      };
+      
+      console.log('Making Dify API call (text only)...', {
+        url: 'https://api.dify.ai/v1/chat-messages',
+        bodySize: JSON.stringify(difyBody).length,
+        isMobile: isMobileRequest
+      });
+      
+      res = await fetch('https://api.dify.ai/v1/chat-messages', {
+        method: 'POST',
+        headers: difyHeaders,
+        body: JSON.stringify(difyBody),
+      });
+    }
 
     const raw = await res.text();
-    const contentType = res.headers.get('content-type') ?? '';
+    const responseContentType = res.headers.get('content-type') ?? '';
 
-    if (!res.ok || !contentType.includes('application/json')) {
+    console.log('Dify API response details:', {
+      status: res.status,
+      statusText: res.statusText,
+      contentType: responseContentType,
+      responseLength: raw.length,
+      responsePreview: raw.slice(0, 500)
+    });
+
+    if (!res.ok || !responseContentType.includes('application/json')) {
+      console.error('Dify API error response:', {
+        status: res.status,
+        statusText: res.statusText,
+        headers: Object.fromEntries(res.headers.entries()),
+        body: raw
+      });
       throw new Error(`Dify responded with ${res.status}: ${raw.slice(0, 200)}`);
     }
 
     const data = JSON.parse(raw);
-    const answer = data.answer ?? '(回答が空でした)';
-    console.log('Dify response successful:', { hasAnswer: !!answer, answerLength: answer.length });
+    
+    // レスポンス形式の判定：ワークフローAPIとチャットAPIで異なる
+    let answer;
+    if (mode === '議事録作成' && audioFile) {
+      // ワークフローAPIの場合
+      if (data.data && data.data.outputs) {
+        // ワークフローの出力から議事録を取得
+        answer = data.data.outputs.text || data.data.outputs.minutes || data.data.outputs.result || data.data.outputs.output || '議事録の生成に失敗しました。';
+        console.log('Workflow response:', {
+          hasOutputs: !!data.data.outputs,
+          outputKeys: Object.keys(data.data.outputs || {}),
+          answerLength: answer.length,
+          fullData: data
+        });
+      } else {
+        console.error('Unexpected workflow response format:', data);
+        answer = 'ワークフローの応答形式が予期されていません。レスポンス: ' + JSON.stringify(data).slice(0, 200);
+      }
+    } else {
+      // チャットAPIの場合
+      answer = data.answer ?? '(回答が空でした)';
+      console.log('Chat response successful:', { hasAnswer: !!answer, answerLength: answer.length });
+    }
+    
     return NextResponse.json({ answer });
   } catch (error) {
     console.error('=== DIFY PROXY ERROR ===');
     console.error('Error type:', typeof error);
     console.error('Error message:', error instanceof Error ? error.message : String(error));
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('Request details:', {
+      hasAudioFile: !!audioFile,
+      audioFileName: audioFile?.name,
+      audioFileSize: audioFile?.size,
+      mode,
+      promptLength: prompt?.length
+    });
     console.error('=== END DIFY PROXY ERROR ===');
     
+    // より詳細なエラーメッセージを提供
+    let userFriendlyError = 'サーバーエラーが発生しました。';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('File upload failed')) {
+        userFriendlyError = '音声ファイルのアップロードに失敗しました。ファイル形式またはサイズを確認してください。';
+      } else if (error.message.includes('415')) {
+        userFriendlyError = 'ファイル形式がサポートされていません。MP3、WAV、M4A、OGGファイルをお試しください。';
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        userFriendlyError = 'API認証に失敗しました。管理者にお問い合わせください。';
+      } else if (error.message.includes('timeout')) {
+        userFriendlyError = 'リクエストがタイムアウトしました。しばらく待ってから再度お試しください。';
+      }
+    }
+    
     return NextResponse.json({ 
-      error: String(error),
+      error: userFriendlyError,
+      technical_error: String(error),
       debug: {
         errorType: typeof error,
+        hasAudioFile: !!audioFile,
         timestamp: new Date().toISOString()
       }
     }, { status: 500 });

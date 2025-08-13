@@ -11,19 +11,48 @@ export const DebugInfo: React.FC = () => {
   useEffect(() => {
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
+    // サーバーサイドの環境変数は直接確認できないため、
+    // APIエンドポイントで確認する
+    const checkServerEnv = async () => {
+      try {
+        const response = await fetch('/api/dify-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: 'test', mode: '通常' })
+        });
+        
+        if (response.status === 500) {
+          const errorData = await response.json();
+          if (errorData.debug?.availableKeys) {
+            setEnvInfo(prev => ({
+              ...prev,
+              DIFY_API_KEY_NORMAL: errorData.debug.availableKeys.normal ? 'EXISTS' : 'MISSING',
+              DIFY_API_KEY_CEREBROVASCULAR: errorData.debug.availableKeys.cerebrovascular ? 'EXISTS' : 'MISSING',
+              DIFY_API_KEY_INFECTION: errorData.debug.availableKeys.infection ? 'EXISTS' : 'MISSING',
+              DIFY_API_KEY_MINUTES: errorData.debug.availableKeys.minutes ? 'EXISTS' : 'MISSING',
+            }));
+          }
+        }
+      } catch (error) {
+        console.log('Could not check server env:', error);
+      }
+    };
+    
     setEnvInfo({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'MISSING',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING',
-      DIFY_API_KEY_NORMAL: process.env.DIFY_API_KEY_NORMAL ? 'EXISTS' : 'MISSING',
-      DIFY_API_KEY_CEREBROVASCULAR: process.env.DIFY_API_KEY_CEREBROVASCULAR ? 'EXISTS' : 'MISSING',
-      DIFY_API_KEY_INFECTION: process.env.DIFY_API_KEY_INFECTION ? 'EXISTS' : 'MISSING',
-      DIFY_API_KEY_MINUTES: process.env.DIFY_API_KEY_MINUTES ? 'EXISTS' : 'MISSING',
+      DIFY_API_KEY_NORMAL: 'CHECKING...',
+      DIFY_API_KEY_CEREBROVASCULAR: 'CHECKING...',
+      DIFY_API_KEY_INFECTION: 'CHECKING...',
+      DIFY_API_KEY_MINUTES: 'CHECKING...',
       NODE_ENV: process.env.NODE_ENV,
       isMobile: isMobile ? 'YES' : 'NO',
       userAgent: navigator.userAgent.slice(0, 50) + '...',
       connection: (navigator as any).connection?.effectiveType || 'unknown',
       timestamp: new Date().toISOString(),
     });
+    
+    checkServerEnv();
   }, []);
 
   // プロダクションでも表示（デバッグ用）

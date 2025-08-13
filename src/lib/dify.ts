@@ -31,8 +31,13 @@ const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3)
   throw lastError || new Error('All fetch attempts failed');
 };
 
-export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常') => {
-  console.log('sendMessageToDify called:', { mode, promptLength: prompt.length });
+export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常', audioFile?: File) => {
+  console.log('sendMessageToDify called:', { 
+    mode, 
+    promptLength: prompt.length, 
+    hasAudioFile: !!audioFile,
+    audioFileName: audioFile?.name 
+  });
   
   try {
     // モバイル環境の検出
@@ -42,20 +47,42 @@ export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常
     console.log('Network request starting:', { 
       isMobile, 
       timeoutMs, 
+      hasAudioFile: !!audioFile,
       userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'server',
       online: typeof navigator !== 'undefined' ? navigator.onLine : true
     });
     
-    // モバイル向けの最適化されたオプション
-    const fetchOptions: RequestInit = {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(isMobile && { 'X-Mobile-Request': 'true' })
-      },
-      body: JSON.stringify({ prompt, mode }),
-      cache: 'no-cache',
-    };
+    // リクエストボディの準備
+    let fetchOptions: RequestInit;
+    
+    if (audioFile) {
+      // 音声ファイルがある場合：FormData
+      const formData = new FormData();
+      formData.append('prompt', prompt);
+      formData.append('mode', mode);
+      formData.append('audioFile', audioFile);
+      
+      fetchOptions = {
+        method: 'POST',
+        headers: {
+          ...(isMobile && { 'X-Mobile-Request': 'true' })
+          // Content-Typeは自動設定される（multipart/form-data）
+        },
+        body: formData,
+        cache: 'no-cache',
+      };
+    } else {
+      // テキストのみの場合：JSON
+      fetchOptions = {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(isMobile && { 'X-Mobile-Request': 'true' })
+        },
+        body: JSON.stringify({ prompt, mode }),
+        cache: 'no-cache',
+      };
+    }
     
     // タイムアウト制御（モバイルではAbortControllerを使わない場合もある）
     if (!isMobile || 'AbortController' in window) {

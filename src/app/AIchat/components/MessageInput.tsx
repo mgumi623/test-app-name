@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useClickTracking } from '../../../hooks/useAnalytics';
@@ -10,31 +10,30 @@ interface MessageInputProps {
   inputText: string;
   isTyping: boolean;
   selectedMode: ModeType;
+  selectedAudioFile: File | null;
   onInputChange: (value: string) => void;
-  onSendMessage: () => Promise<void>;
+  onSendMessage: (audioFile?: File) => Promise<void>;
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => Promise<void>;
+  onFileSelect: (file: File) => void;
+  onFileRemove: () => void;
 }
 
 export default function MessageInput({
   inputText,
   isTyping,
   selectedMode,
+  selectedAudioFile,
   onInputChange,
   onSendMessage,
   onKeyDown,
+  onFileSelect,
+  onFileRemove,
 }: MessageInputProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const { handleTrackedClick } = useClickTracking();
-  const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
+  const [showAudioUpload, setShowAudioUpload] = useState(false);
 
   const isMinutesMode = selectedMode === '議事録作成';
-
-  // モード変更時に音声ファイルをクリア
-  useEffect(() => {
-    if (!isMinutesMode) {
-      setSelectedAudioFile(null);
-    }
-  }, [isMinutesMode]);
 
   useEffect(() => {
     if (!inputRef.current) return;
@@ -43,37 +42,39 @@ export default function MessageInput({
     el.style.height = `${el.scrollHeight}px`;
   }, [inputText]);
 
-  const handleFileSelect = (file: File) => {
-    setSelectedAudioFile(file);
-    // 音声ファイルが選択されたことをテキストエリアに反映
-    if (!inputText.trim()) {
-      onInputChange(`音声ファイル「${file.name}」を分析してください。`);
-    }
+  const handleSendWithAudio = async () => {
+    await onSendMessage(selectedAudioFile || undefined);
   };
 
-  const handleFileRemove = () => {
-    setSelectedAudioFile(null);
-    // テキストもクリア（必要に応じて）
-    if (inputText.includes('音声ファイル「') && inputText.includes('」を分析してください。')) {
-      onInputChange('');
-    }
+  const handleFileSelectWrapper = (file: File) => {
+    onFileSelect(file);
+    setShowAudioUpload(false);
   };
 
   return (
-    <div className="bg-transparent p-4 sm:p-6 w-full">
-      <div className="max-w-4xl mx-auto space-y-3">
-        {/* 音声アップロード（議事録作成モードの場合のみ表示） */}
-        {isMinutesMode && (
-          <AudioUpload
-            onFileSelect={handleFileSelect}
-            onFileRemove={handleFileRemove}
-            selectedFile={selectedAudioFile}
-            disabled={isTyping}
-          />
-        )}
-
+    <div className="bg-transparent p-1.5 sm:p-2 w-full relative">
+      <div className="max-w-4xl mx-auto">
         {/* メッセージ入力エリア */}
         <div className="flex items-end space-x-3 bg-white/70 border border-input rounded-2xl p-2 shadow-sm focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/20 transition">
+          {/* 音声ファイル添付ボタン（議事録作成モードの場合のみ表示） */}
+          {isMinutesMode && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowAudioUpload(!showAudioUpload)}
+              className="rounded-xl touch-manipulation"
+              style={{ 
+                minHeight: '44px', 
+                minWidth: '44px',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+              disabled={isTyping}
+            >
+              <Mic className="w-5 h-5" />
+            </Button>
+          )}
+          
           <Textarea
             ref={inputRef}
             value={inputText}
@@ -87,8 +88,11 @@ export default function MessageInput({
             className="flex-1 resize-none min-h-[44px] max-h-32 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <Button
-            onClick={handleTrackedClick('send-message-btn', 'button', onSendMessage)}
-            disabled={!inputText.trim() || isTyping}
+            onClick={handleTrackedClick('send-message-btn', 'button', handleSendWithAudio)}
+            disabled={
+              isTyping || 
+              (isMinutesMode ? !selectedAudioFile : !inputText.trim())
+            }
             size="icon"
             className="rounded-xl touch-manipulation"
             style={{ 
@@ -100,6 +104,40 @@ export default function MessageInput({
             <Send className="w-5 h-5" />
           </Button>
         </div>
+
+        {/* 選択された音声ファイル表示 */}
+        {isMinutesMode && selectedAudioFile && (
+          <div className="mt-1 px-2">
+            <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
+              <Mic className="w-2.5 h-2.5 text-blue-600 flex-shrink-0" />
+              <span className="text-blue-800 truncate flex-1 text-xs">{selectedAudioFile.name}</span>
+              <button
+                type="button"
+                onClick={onFileRemove}
+                className="w-3 h-3 flex items-center justify-center text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded"
+                disabled={isTyping}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 音声アップロードポップアップ */}
+        {isMinutesMode && showAudioUpload && (
+          <div className="absolute bottom-full left-0 right-0 mb-2 z-10">
+            <div className="max-w-4xl mx-auto px-2">
+              <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                <AudioUpload
+                  onFileSelect={handleFileSelectWrapper}
+                  onFileRemove={onFileRemove}
+                  selectedFile={selectedAudioFile}
+                  disabled={isTyping}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
