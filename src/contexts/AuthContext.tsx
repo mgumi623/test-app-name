@@ -43,20 +43,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // 初期認証状態の確認
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        setUserData({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name,
-          role: session.user.user_metadata?.role,
-          permission: session.user.user_metadata?.permission,
-          job: session.user.user_metadata?.job,
-          raw_user_meta_data: session.user.user_metadata,
-        });
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          // セッションエラーの場合、ローカルストレージをクリア
+          if (error.message.includes('refresh') || error.message.includes('token')) {
+            await supabase.auth.signOut();
+          }
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          setUser(session.user);
+          setUserData({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name,
+            role: session.user.user_metadata?.role,
+            permission: session.user.user_metadata?.permission,
+            job: session.user.user_metadata?.job,
+            raw_user_meta_data: session.user.user_metadata,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to get initial session:', error);
+        await supabase.auth.signOut();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getInitialSession();
@@ -64,6 +81,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // 認証状態の変更を監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
+        
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed successfully');
+        }
+        
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          setUser(null);
+          setUserData(null);
+          setLoading(false);
+          return;
+        }
+
         if (session?.user) {
           setUser(session.user);
           setUserData({
@@ -122,10 +152,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserData(null);
-    router.push('/login');
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setUserData(null);
+      
+      // ローカルストレージも完全にクリア
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+      
+      router.push('/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // エラーが発生してもログアウト状態にする
+      setUser(null);
+      setUserData(null);
+      router.push('/login');
+    }
   };
 
   const value = {

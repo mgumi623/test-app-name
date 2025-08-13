@@ -9,6 +9,8 @@ export const DebugInfo: React.FC = () => {
   const [envInfo, setEnvInfo] = useState<any>({});
 
   useEffect(() => {
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     setEnvInfo({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'MISSING',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING',
@@ -17,6 +19,9 @@ export const DebugInfo: React.FC = () => {
       DIFY_API_KEY_INFECTION: process.env.DIFY_API_KEY_INFECTION ? 'EXISTS' : 'MISSING',
       DIFY_API_KEY_MINUTES: process.env.DIFY_API_KEY_MINUTES ? 'EXISTS' : 'MISSING',
       NODE_ENV: process.env.NODE_ENV,
+      isMobile: isMobile ? 'YES' : 'NO',
+      userAgent: navigator.userAgent.slice(0, 50) + '...',
+      connection: (navigator as any).connection?.effectiveType || 'unknown',
       timestamp: new Date().toISOString(),
     });
   }, []);

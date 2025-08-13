@@ -2,14 +2,32 @@
 export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成';
 
 export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常') => {
+  console.log('sendMessageToDify called:', { mode, promptLength: prompt.length });
+  
   try {
+    // モバイル環境の検出
+    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const timeoutMs = isMobile ? 60000 : 30000; // モバイルは60秒、デスクトップは30秒
+    
+    console.log('Network request starting:', { isMobile, timeoutMs });
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
     const res = await fetch('/api/dify-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'User-Agent': isMobile ? 'Mobile-Browser' : 'Desktop-Browser'
+      },
       body: JSON.stringify({ prompt, mode }),
-      // タブレット環境での接続改善のためのオプション
-      signal: AbortSignal.timeout(30000), // 30秒タイムアウト
+      signal: controller.signal,
+      // モバイル向けの追加オプション
+      keepalive: true,
+      cache: 'no-cache',
     });
+    
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const text = await res.text();

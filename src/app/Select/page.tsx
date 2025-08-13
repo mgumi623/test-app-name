@@ -64,8 +64,20 @@ export default function DepartmentSelection() {
     }
   }, []);
 
+  // ページロード時にポップアップチェックをリセット
+  useEffect(() => {
+    setAnnouncementPopupChecked(false);
+  }, []);
+
   // アナウンスポップアップ表示のチェック
   useEffect(() => {
+    console.log('Popup check conditions:', {
+      user: !!user,
+      announcementPopupChecked,
+      announcementsLoading,
+      announcementsLength: announcements.length
+    });
+
     if (user && !announcementPopupChecked && !announcementsLoading && announcements.length > 0) {
       try {
         const userDepartment = user.user_metadata?.department as string;
@@ -136,6 +148,7 @@ export default function DepartmentSelection() {
     setPopupAnnouncements([]);
   };
 
+
   const handleAnnouncementViewed = (announcementId: string) => {
     // 個別のアナウンス表示回数をカウントアップ
     incrementPopupDisplayCount(announcementId);
@@ -146,6 +159,7 @@ export default function DepartmentSelection() {
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground">
       <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
           <Header />
+
 
           <p className="sr-only" role="status" aria-live="polite">
             {isPending && selectedLabel ? `${selectedLabel} に移動中…` : '項目を選択してください'}

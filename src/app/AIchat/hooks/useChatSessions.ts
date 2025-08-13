@@ -160,7 +160,9 @@ export const useChatSessions = (mode: ModeType = '通常') => {
     setIsTyping(true);
 
     try {
+      console.log('Starting Dify API call for message:', { mode, messageLength: userMessage.text.length });
       const difyRes = await sendMessageToDify(userMessage.text, mode);
+      console.log('Dify API call completed successfully');
       const aiMessageText = difyRes.answer ?? '（回答が空でした）';
 
       const aiMessage: ChatMessage = {
@@ -189,12 +191,31 @@ export const useChatSessions = (mode: ModeType = '通常') => {
       // 分析追跡
       analyticsService.trackChatMessage(aiMessageText.length, false);
     } catch (err) {
-      console.error('Dify API error', err);
+      console.error('Dify API error details:', {
+        error: err,
+        errorMessage: err instanceof Error ? err.message : String(err),
+        errorType: typeof err,
+        userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'server',
+        mode
+      });
+      
+      // より詳細なエラーメッセージ
+      let errorText = '申し訳ございません。一時的にエラーが発生しました。';
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError' || err.message.includes('timeout')) {
+          errorText += 'ネットワークの接続が不安定な可能性があります。しばらく待ってから再度お試しください。';
+        } else if (err.message.includes('API Key')) {
+          errorText += 'システムの設定に問題があります。管理者にお問い合わせください。';
+        } else {
+          errorText += `詳細: ${err.message.slice(0, 100)}`;
+        }
+      }
       
       // エラー時のフォールバックメッセージ
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
-        text: '申し訳ございません。一時的にエラーが発生しました。しばらく待ってから再度お試しください。',
+        text: errorText,
         sender: 'ai',
         timestamp: new Date(),
       };
