@@ -5,6 +5,7 @@ import {
   Bot,
   BarChart3,
   Bell,
+  Clock,
 } from 'lucide-react';
 import { Option } from './types';
 
@@ -28,10 +29,10 @@ export const OPTIONS: Option[] = [
     gradient: 'from-pink-500 to-rose-600',
   },
   {
-    id: 'rehab-plan',
+    id: 'rehab-shift',
     department: 'リハビリテーション部',
-    label: '予定表',
-    description: 'リハスタッフの予定・担当管理',
+    label: 'シフト管理',
+    description: 'リハスタッフのシフト管理',
     href: '/schedule/riha',
     Icon: Activity,
     gradient: 'from-cyan-500 to-sky-600',

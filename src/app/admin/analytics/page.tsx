@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Loading } from '@/components/ui/loading';
 
 // シンプルなチャート代替コンポーネント
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,7 +14,7 @@ const SimpleChart = ({ data, type }: { data: any[]; type: string }) => (
     </div>
   </div>
 );
-import { Calendar, Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity, BarChart } from 'lucide-react';
+import { Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { analyticsService } from '../../../lib/analyticsService';
@@ -43,32 +43,12 @@ interface DashboardStats {
   permissionFeatureUsage: { permission: string; feature: string; count: number }[];
 }
 
-const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
-
 export default function AnalyticsDashboard() {
-  const [data, setData] = useState<AnalyticsData>({ sessions: [], events: [], errors: [] });
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
 
-  useEffect(() => {
-    loadAnalyticsData();
-  }, [timeRange]);
-
-  const loadAnalyticsData = async () => {
-    setIsLoading(true);
-    try {
-      const analyticsData = await analyticsService.getAnalyticsSummary();
-      setData(analyticsData);
-      setStats(calculateStats(analyticsData));
-    } catch (error) {
-      console.error('Failed to load analytics data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const calculateStats = (data: AnalyticsData): DashboardStats => {
+  const calculateStats = useCallback((data: AnalyticsData): DashboardStats => {
     const now = new Date();
     const timeRangeMs = {
       '24h': 24 * 60 * 60 * 1000,
@@ -229,13 +209,30 @@ export default function AnalyticsDashboard() {
       permissionBreakdown,
       permissionFeatureUsage,
     };
-  };
+  }, [timeRange]);
+
+  const loadAnalyticsData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const analyticsData = await analyticsService.getAnalyticsSummary();
+      setStats(calculateStats(analyticsData));
+    } catch (error) {
+      console.error('Failed to load analytics data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [calculateStats]);
+
+  useEffect(() => {
+    loadAnalyticsData();
+  }, [loadAnalyticsData]);
+
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen bg-gray-50 items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <Loading size="md" className="mx-auto mb-4" />
           <p className="text-gray-600">分析データを読み込み中...</p>
         </div>
       </div>
@@ -353,7 +350,7 @@ export default function AnalyticsDashboard() {
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">役職別機能使用状況</h3>
             <div className="space-y-3 max-h-72 overflow-y-auto">
-              {stats?.permissionFeatureUsage.slice(0, 10).map((usage, index) => (
+              {stats?.permissionFeatureUsage.slice(0, 10).map((usage) => (
                 <div key={`${usage.permission}-${usage.feature}`} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
@@ -394,7 +391,7 @@ export default function AnalyticsDashboard() {
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">職種別ページアクセス</h3>
             <div className="space-y-3 max-h-72 overflow-y-auto">
-              {stats?.topPagesByPermission.map((item, index) => (
+              {stats?.topPagesByPermission.map((item) => (
                 <div key={`${item.path}-${item.permission}`} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
@@ -415,7 +412,7 @@ export default function AnalyticsDashboard() {
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">エラータイプ</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {stats?.errorTypes.slice(0, 6).map((error, index) => (
+            {stats?.errorTypes.slice(0, 6).map((error) => (
               <div key={error.type} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <AlertTriangle className="w-5 h-5 text-red-500" />

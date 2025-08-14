@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []); // supabaseはグローバルインスタンスのため依存配列から除外
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       return { error: null };
-    } catch (error) {
+    } catch {
       return { error: 'ログインに失敗しました' };
     }
   };

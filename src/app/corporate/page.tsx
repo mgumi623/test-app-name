@@ -1,10 +1,8 @@
 "use client";
 import React, {
   useState,
-  useRef,
   useEffect,
   FC,
-  ChangeEvent,
 } from "react";
 import {
   MessageSquare,
@@ -15,11 +13,6 @@ import {
   Plus,
   X,
   Send,
-  Megaphone,
-  Target,
-  Users,
-  Calendar,
-  Lightbulb,
 } from "lucide-react";
 
 // 型定義
@@ -80,10 +73,9 @@ const CorporateCommunicationApp: FC = () => {
     type: "info",
     priority: "medium",
   });
-  const [filter, setFilter] = useState<"all" | FeedbackMessage["category"]>("all");
+  const [filter] = useState<"all" | FeedbackMessage["category"]>("all");
   const [userRole, setUserRole] = useState<"employee" | "management">("employee");
 
-  const modalRef = useRef<HTMLDivElement | null>(null);
 
   // 初期データ
   useEffect(() => {
@@ -215,21 +207,6 @@ const CorporateCommunicationApp: FC = () => {
     (msg) => filter === "all" || msg.category === filter
   );
 
-  const getPriorityColor = (priority: Vision["priority"]) => {
-    switch (priority) {
-      case "high":
-        return "text-red-500";
-      case "medium":
-        return "text-yellow-500";
-      case "low":
-        return "text-green-500";
-      default:
-        return "text-gray-500";
-    }
-  };
-
-  const getTypeLabel = (type: Vision["type"]) =>
-    type === "short" ? "短期" : "長期";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">

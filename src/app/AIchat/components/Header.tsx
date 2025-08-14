@@ -1,18 +1,30 @@
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成' | '文献検索';
 
+const modeDescriptions: Record<ModeType, string> = {
+  '通常': '医療に関する一般的な質問に回答いたします。\n具体的な症状や治療についてのアドバイスは、必ず医師にご相談ください。',
+  '脳血管': '脳血管疾患に関する専門的な質問に答えます',
+  '感染マニュアル': '感染症対策マニュアルに基づいて回答します',
+  '議事録作成': '会議の内容から議事録を作成します',
+  '文献検索': '医学文献を検索して関連情報を提供します',
+};
+
 interface HeaderProps {
-  isSidebarOpen: boolean;
-  onToggleSidebar: () => void;
   selectedMode?: ModeType;
   onModeChange?: (mode: ModeType) => void;
+  currentChatId: string;
+  onSendMessage: (text: string) => void;
+  onToggleSidebar: () => void;
 }
 
-export default function Header({ isSidebarOpen, onToggleSidebar, selectedMode = '通常', onModeChange }: HeaderProps) {
+export default function Header({ selectedMode = '通常', onModeChange, onSendMessage, onToggleSidebar }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [shouldRotate, setShouldRotate] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const modes: ModeType[] = ['通常', '脳血管', '感染マニュアル', '議事録作成', '文献検索'];
@@ -37,22 +49,35 @@ export default function Header({ isSidebarOpen, onToggleSidebar, selectedMode = 
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
-          aria-label="Toggle Sidebar"
+          className="hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+          title="チャット履歴を表示"
         >
-          {isSidebarOpen ? (
-            <X className="w-5 h-5" />
-          ) : (
-            <Menu className="w-5 h-5" />
-          )}
+          <Menu className="w-5 h-5" />
         </Button>
-
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-1.5 transition-colors"
           >
             <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg">
-              <img src="/image/clover.svg" alt="Clover Logo" className="w-5 h-5" />
+              <style>{`
+                @keyframes single-spin {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+                .rotate-once {
+                  animation: single-spin 0.8s ease-in-out;
+                }
+              `}</style>
+              <div className={shouldRotate ? 'rotate-once' : ''}>
+                <Image 
+                  src="/image/clover.svg" 
+                  alt="Clover Logo" 
+                  width={20} 
+                  height={20} 
+                  onAnimationEnd={() => setShouldRotate(false)}
+                />
+              </div>
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900">
@@ -66,18 +91,33 @@ export default function Header({ isSidebarOpen, onToggleSidebar, selectedMode = 
           {isDropdownOpen && (
             <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
               {modes.map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => {
-                    onModeChange?.(mode);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${
-                    selectedMode === mode ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                  }`}
-                >
-                  {mode}モード
-                </button>
+                <TooltipProvider key={mode}>
+                  <Tooltip delayDuration={200}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => {
+                          if (mode === selectedMode) {
+                            setIsDropdownOpen(false);
+                            return;
+                          }
+                          setIsDropdownOpen(false);
+                          setShouldRotate(true);
+                          const message = `モードを${mode}に変更しました。\n${modeDescriptions[mode]}`;
+                          onSendMessage(message);
+                          onModeChange?.(mode);
+                        }}
+                        className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${
+                          selectedMode === mode ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                        }`}
+                      >
+                        {mode}モード
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{modeDescriptions[mode]}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ))}
             </div>
           )}

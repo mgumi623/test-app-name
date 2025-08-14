@@ -8,7 +8,7 @@ interface SidebarProps {
   currentChatId: string;
   onSelectChat: (id: string) => void;
   onCreateNewChat: () => void;
-  onDeleteChat: (chatId: string, e: React.MouseEvent<HTMLButtonElement>) => void;
+  onDeleteChat: (chatId: string) => void;
   onCloseSidebar: () => void;
 }
 
@@ -24,7 +24,7 @@ export default function Sidebar({
   return (
     <>
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-80 bg-[#e8f2ed] border-r border-[#cce3d9] backdrop-blur-sm transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

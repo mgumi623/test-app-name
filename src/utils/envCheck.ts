@@ -68,8 +68,8 @@ export const checkDifyApiKeys = () => {
   const status = {
     configured: Object.values(keys).filter(key => !!key).length,
     total: Object.keys(keys).length,
-    missing: Object.entries(keys).filter(([name, key]) => !key).map(([name]) => name),
-    available: Object.entries(keys).filter(([name, key]) => !!key).map(([name]) => name)
+    missing: Object.entries(keys).filter(([, key]) => !key).map(([name]) => name),
+    available: Object.entries(keys).filter(([, key]) => !!key).map(([name]) => name)
   };
 
   return {

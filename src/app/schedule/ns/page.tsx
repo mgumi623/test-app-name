@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -171,7 +171,7 @@ const ShiftManagementTool = () => {
   const monthDays = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
 
   const getDayOfWeek = (day: number) => youbi[new Date(new Date(currentDate).getFullYear(), new Date(currentDate).getMonth(), day).getDay()];
-  const dateKey = (day: number) => getDateKey(new Date(currentDate), day);
+  const dateKey = useCallback((day: number) => getDateKey(new Date(currentDate), day), [currentDate]);
 
   // ---- 当月のサマリ計算（各日ごとの人数カウント）
   const daySummaries = useMemo(() => {
@@ -185,21 +185,8 @@ const ShiftManagementTool = () => {
       });
     }
     return result;
-  }, [daysInMonth, shifts]);
+  }, [daysInMonth, shifts, dateKey]);
 
-  // ---- 行（スタッフ）ごとの合計
-  const staffTotals = useMemo(() => {
-    const totals: Record<string, Partial<Record<ShiftKey, number>>> = {};
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dk = dateKey(d);
-      const m = shifts[dk] || {};
-      for (const [sid, key] of Object.entries(m)) {
-        if (!totals[sid]) totals[sid] = {};
-        totals[sid]![key] = (totals[sid]![key] || 0) + 1;
-      }
-    }
-    return totals;
-  }, [daysInMonth, shifts]);
 
   // ------------------------- 操作ユーティリティ -------------------------
 
@@ -251,12 +238,6 @@ const ShiftManagementTool = () => {
     }
   };
 
-  const clearDay = (day: number) => {
-    const dk = dateKey(day);
-    const next = { ...shifts };
-    delete next[dk];
-    setShifts(next);
-  };
 
   const clearMonth = () => setShifts({});
 
@@ -744,7 +725,7 @@ const ShiftManagementTool = () => {
             <div className="px-2 py-1 text-xs text-gray-500">シフトを選択</div>
             <div className="space-y-1">
               {Object.entries(SHIFT_TYPES)
-                .filter(([_, v]) => v.role === menuPos.role)
+                .filter(([, v]) => v.role === menuPos.role)
                 .map(([k, v]) => (
                   <button
                     key={k}

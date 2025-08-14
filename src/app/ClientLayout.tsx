@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useErrorTracking } from '@/hooks/useAnalytics';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { Toaster } from 'sonner';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,6 +50,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               style={{ minHeight: '100vh' }}
             >
               {children}
+              <Toaster position="top-right" richColors />
             </motion.div>
           </AnimatePresence>
         </ProtectedRoute>

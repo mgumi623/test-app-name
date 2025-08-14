@@ -188,6 +188,15 @@
   --sidebar-ring: oklch(1 0 0);
 }
 
+@keyframes smooth-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.smooth-spin {
+  animation: smooth-spin 3s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

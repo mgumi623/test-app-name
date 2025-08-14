@@ -78,7 +78,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
           return (
             <span
               key={index}
-              className="text-xl font-bold text-gray-900 block"
+              className="text-xl font-bold text-[#0a1845] block"
             >
               {part.text}
             </span>

@@ -15,8 +15,11 @@
       "Bash(del debug-analytics.js)",
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

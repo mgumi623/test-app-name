@@ -15,7 +15,7 @@ export const getMobileInfo = () => {
     isAndroid,
     userAgent: userAgent.slice(0, 100),
     online: navigator.onLine,
-    connection: (navigator as any).connection?.effectiveType || 'unknown',
+    connection: (navigator as { connection?: { effectiveType?: string } }).connection?.effectiveType || 'unknown',
     platform: navigator.platform || 'unknown'
   };
 };

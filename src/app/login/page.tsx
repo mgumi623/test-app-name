@@ -3,7 +3,7 @@ import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Eye, EyeOff, Lock, User, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
@@ -17,15 +17,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const [showResetForm, setShowResetForm] = useState(false);
-  const [resetData, setResetData] = useState({ login_id: '', newPassword: '', confirmPassword: '' });
-  const [resetMessage, setResetMessage] = useState('');
+  const [resetMessage] = useState('');
 
   /* ------------------------------- Handlers -------------------------------- */
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleResetInputChange = (e: ChangeEvent<HTMLInputElement>) =>
-    setResetData({ ...resetData, [e.target.name]: e.target.value });
 
   /* --------------------------------- Login --------------------------------- */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -46,7 +43,7 @@ export default function LoginPage() {
       if (result.error) {
         setError(result.error);
       }
-    } catch (error) {
+    } catch {
       setError('ログインに失敗しました。再度お試しください。');
     } finally {
       setIsLoading(false);
@@ -54,9 +51,6 @@ export default function LoginPage() {
   };
 
   /* ---------------------------- Password Reset ----------------------------- */
-  const handlePasswordReset = async () => {
-    setResetMessage('パスワードリセットは管理者にお問い合わせください。');
-  };
 
   /* --------------------------------- JSX ---------------------------------- */
   return (

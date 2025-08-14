@@ -5,7 +5,7 @@ interface ChatListProps {
   chatSessions: ChatSession[];
   currentChatId: string;
   onSelectChat: (id: string) => void;
-  onDeleteChat: (chatId: string, e: React.MouseEvent<HTMLButtonElement>) => void;
+  onDeleteChat: (chatId: string) => void;
 }
 
 export default function ChatList({ 
@@ -15,13 +15,13 @@ export default function ChatList({
   onDeleteChat 
 }: ChatListProps) {
   return (
-    <div className="flex-1 overflow-y-auto p-2">
+    <div className="flex-1 overflow-y-auto p-2 bg-[#e8f2ed]">
       {chatSessions.map((chat) => (
         <div
           key={chat.id}
           onClick={() => onSelectChat(chat.id)}
-          className={`group flex items-center justify-between p-3 mb-2 rounded-lg cursor-pointer hover:bg-gray-100 transition ${
-            chat.id === currentChatId ? 'bg-blue-50 border border-blue-200' : ''
+          className={`group flex items-center justify-between p-3 mb-2 rounded-lg cursor-pointer hover:bg-[#dbe9e3] transition ${
+            chat.id === currentChatId ? 'bg-[#dbe9e3] border border-[#cce3d9]' : ''
           }`}
         >
           <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -35,7 +35,10 @@ export default function ChatList({
           </div>
           {chatSessions.length > 1 && (
             <button
-              onClick={(e) => onDeleteChat(chat.id, e)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteChat(chat.id);
+              }}
               className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-500 hover:text-red-500 hover:bg-red-50 transition"
             >
               <Trash2 className="w-4 h-4" />

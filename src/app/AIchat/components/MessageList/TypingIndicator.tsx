@@ -1,19 +1,41 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Loading } from '@/components/ui/loading';
+import { Bot } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function TypingIndicator() {
+  const messages = [
+    "返答を生成しています...",
+    "少々お待ちください...",
+    "考え中です..."
+  ];
+
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentMessageIndex((current) => (current + 1) % messages.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="flex justify-start w-full max-w-4xl mx-auto px-4 animate-fade-in mb-6">
-      <div className="flex items-start space-x-3">
-        <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+    <div className="flex justify-start w-full max-w-6xl mx-auto px-4 animate-fade-in mb-6">
+      <div className="flex items-start space-x-3 w-full">
+        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
           <AvatarFallback className="bg-secondary text-white">
-            🤖
+            <Bot className="w-4 h-4" />
           </AvatarFallback>
         </Avatar>
-        <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-sm">
-          <div className="flex space-x-1">
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce animate-delay-100" />
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce animate-delay-200" />
+        <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-sm flex-grow">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Loading size="sm" className="flex-shrink-0" />
+              <p key={currentMessageIndex} className="text-sm text-muted-foreground message-fade-in">
+                {messages[currentMessageIndex]}
+              </p>
+            </div>
           </div>
         </div>
       </div>

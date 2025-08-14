@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Loading } from '@/components/ui/loading';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -38,7 +39,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Loading size="sm" />
           <p className="text-muted-foreground">読み込み中...</p>
         </div>
       </div>

@@ -32,12 +32,9 @@ const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3)
 };
 
 export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常', audioFile?: File) => {
-  console.log('sendMessageToDify called:', { 
-    mode, 
-    promptLength: prompt.length, 
-    hasAudioFile: !!audioFile,
-    audioFileName: audioFile?.name 
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('sendMessageToDify called:', { mode, promptLength: prompt.length });
+  }
   
   try {
     // モバイル環境の検出
@@ -51,15 +48,9 @@ export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常
       timeoutMs = isMobile ? 90000 : 30000; // モバイルは90秒、デスクトップは30秒
     }
     
-    console.log('Network request starting:', { 
-      mode,
-      isMobile, 
-      timeoutMs, 
-      timeoutMinutes: timeoutMs / 60000,
-      hasAudioFile: !!audioFile,
-      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'server',
-      online: typeof navigator !== 'undefined' ? navigator.onLine : true
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Network request starting:', { mode, timeoutMs });
+    }
     
     // リクエストボディの準備
     let fetchOptions: RequestInit;
@@ -93,29 +84,46 @@ export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常
       };
     }
     
-    // タイムアウト制御（モバイルではAbortControllerを使わない場合もある）
-    if (!isMobile || 'AbortController' in window) {
+    try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log(`Request timeout after ${timeoutMs}ms (${timeoutMs / 60000} minutes), aborting...`);
-        controller.abort();
-      }, timeoutMs);
-      
-      fetchOptions.signal = controller.signal;
-      
-      try {
-        const res = await fetchWithRetry('/api/dify-proxy', fetchOptions, isMobile ? 2 : 1);
-        clearTimeout(timeoutId);
-        return await handleResponse(res);
-      } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
-      }
-    } else {
-      // フォールバック: AbortControllerがない古いブラウザ向け
-      console.log('Using fallback fetch without AbortController');
-      const res = await fetchWithRetry('/api/dify-proxy', fetchOptions, 1);
+      let timeoutId: NodeJS.Timeout;
+
+      const wrappedFetch = async () => {
+        try {
+          fetchOptions.signal = controller.signal;
+          const response = await fetchWithRetry('/api/dify-proxy', fetchOptions, 3);
+          clearTimeout(timeoutId);
+          return response;
+        } catch (error) {
+          clearTimeout(timeoutId);
+          throw error;
+        }
+      };
+
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          reject(new Error('応答時間が長すぎます。もう一度お試しください。'));
+        }, 60000); // 1分のタイムアウト
+      });
+
+      const res = await Promise.race([wrappedFetch(), timeoutPromise]) as Response;
       return await handleResponse(res);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('Request aborted:', error.message);
+          throw new Error('応答時間が長すぎます。もう一度お試しください。');
+        }
+        console.error('Network error:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
+      } else {
+        console.error('Unknown error:', error);
+      }
+      throw error;
     }
   } catch (error) {
     console.error('sendMessageToDify error:', {
@@ -141,10 +149,10 @@ const handleResponse = async (res: Response) => {
         // JSONとして解析を試行
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           // JSONでない場合はテキストとして扱う
         }
-      } catch (e) {
+      } catch {
         errorText = 'Failed to read error response';
       }
       

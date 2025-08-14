@@ -1,0 +1,1 @@
+export type ViewType = 'shift' | 'staff' | 'settings' | string;

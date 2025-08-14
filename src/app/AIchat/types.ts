@@ -1,8 +1,9 @@
 export interface ChatMessage {
   id: string;
   text: string;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'ai' | 'system';
   timestamp: Date;
+  type?: 'mode_change' | 'normal' | 'system';
 }
 
 export interface ChatSession {
@@ -10,7 +11,14 @@ export interface ChatSession {
   title: string;
   messages: ChatMessage[];
   lastMessage: Date;
-  user_id?: string;
+  user_id: string;
+  metadata: {
+    createdAt: Date;
+    updatedAt: Date;
+    currentMode: string;
+    messageCount: number;
+    hasUnread: boolean;
+  };
 }
 
 export interface DatabaseChatSession {

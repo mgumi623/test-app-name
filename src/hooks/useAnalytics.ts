@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { analyticsService } from '../lib/analyticsService';
 
 export const useAnalytics = () => {
@@ -31,7 +30,6 @@ export const useAnalytics = () => {
 
 // ページビュー自動追跡フック
 export const usePageTracking = () => {
-  const router = useRouter();
   const { trackPageView } = useAnalytics();
   const hasTrackedInitial = useRef(false);
 

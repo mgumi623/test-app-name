@@ -50,12 +50,12 @@ export default function DepartmentSelection() {
   // デバッグ用：localStorage クリア機能
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).clearAnnouncementStorage = () => {
+      (window as { clearAnnouncementStorage?: () => void }).clearAnnouncementStorage = () => {
         localStorage.removeItem('closedAnnouncements');
         localStorage.removeItem('announcements');
         console.log('Announcement storage cleared. Please refresh to see popups again.');
       };
-      (window as any).showAnnouncementStorage = () => {
+      (window as { showAnnouncementStorage?: () => void }).showAnnouncementStorage = () => {
         const closedAnnouncements = localStorage.getItem('closedAnnouncements');
         const storedAnnouncements = localStorage.getItem('announcements');
         console.log('Closed announcements:', closedAnnouncements ? JSON.parse(closedAnnouncements) : []);

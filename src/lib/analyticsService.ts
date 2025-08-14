@@ -161,7 +161,7 @@ class AnalyticsService {
         // ユーザーのpermission情報を取得（複数の場所をチェック）
         const permission = 
           userData.user.user_metadata?.permission ||
-          (userData.user as any).raw_user_meta_data?.permission ||
+          (userData.user as { raw_user_meta_data?: { permission?: string } }).raw_user_meta_data?.permission ||
           'unknown';
         sessionData.user_permission = permission as string;
         
@@ -304,7 +304,7 @@ class AnalyticsService {
       if (userData.user) {
         errorData.user_id = userData.user.id;
         errorData.user_permission = (userData.user.user_metadata?.permission as string) || 
-          ((userData.user as any).raw_user_meta_data?.permission as string) || 'unknown';
+          ((userData.user as { raw_user_meta_data?: { permission?: string } }).raw_user_meta_data?.permission) || 'unknown';
       }
 
       const { error: dbError } = await analyticsSupabase
@@ -335,7 +335,7 @@ class AnalyticsService {
           event.user_id = userData.user.id;
           const permission = 
             userData.user.user_metadata?.permission ||
-            (userData.user as any).raw_user_meta_data?.permission ||
+            (userData.user as { raw_user_meta_data?: { permission?: string } }).raw_user_meta_data?.permission ||
             'unknown';
           event.user_permission = permission as string;
           
@@ -399,7 +399,7 @@ class AnalyticsService {
         
         // データベース状態をチェック
         console.log('🔍 Checking database state...');
-        const { data: tableExists, error: tableError } = await supabase
+        const { error: tableError } = await supabase
           .from('analytics_events')
           .select('count')
           .limit(0);

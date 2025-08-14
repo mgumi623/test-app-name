@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Mic, Upload, X, File } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Mic, X, File } from 'lucide-react';
 
 interface AudioUploadProps {
   onFileSelect: (file: File) => void;
@@ -66,13 +65,6 @@ export default function AudioUpload({
     return audioTypes.includes(file.type) || (!!fileExtension && audioExtensions.includes(fileExtension));
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();

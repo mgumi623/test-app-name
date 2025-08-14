@@ -133,6 +133,13 @@ export class ChatService {
             messages,
             lastMessage: new Date(session.updated_at),
             user_id: session.user_id,
+            metadata: {
+              createdAt: new Date(session.created_at),
+              updatedAt: new Date(session.updated_at),
+              currentMode: '',
+              messageCount: messages.length,
+              hasUnread: false
+            }
           };
         })
       );
@@ -222,26 +229,54 @@ export class ChatService {
   }
 
   // メッセージ保存
-  async saveMessage(sessionId: string, content: string, sender: 'user' | 'ai'): Promise<string | null> {
+  async saveMessage(sessionId: string, content: string, sender: string): Promise<string | null> {
     try {
+      // システムメッセージはAIメッセージとして保存
+      const normalizedSender = sender === 'system' ? 'ai' : sender;
+      
+      // 必要なフィールドのみを含むメッセージオブジェクトを作成
+      const message = {
+        session_id: sessionId,
+        content: content,
+        sender: normalizedSender
+      };
+
+      console.log('Saving message:', message);
+
       const { data, error } = await this.supabase
         .from('chat_messages')
-        .insert([{
-          session_id: sessionId,
-          content,
-          sender,
-        }])
-        .select()
-        .single();
+        .insert([message])
+        .select('id');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          requestData: message
+        });
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        console.error('No data returned after message insert');
+        return null;
+      }
 
       // セッションの更新日時も更新
       await this.updateSessionTimestamp(sessionId);
 
-      return data.id;
+      return data[0].id;
     } catch (error) {
-      console.error('Error saving message:', error);
+      const errorObj = error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      } : error;
+      
+      console.error('Error saving message:', errorObj);
       return null;
     }
   }

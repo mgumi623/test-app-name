@@ -1,280 +1,358 @@
-import { useState, useEffect } from 'react';
-import { ChatSession, ChatMessage } from '../types';
+import { useState, useCallback, useEffect } from 'react';
+import { ChatSession } from '../types/chat';
 import { sendMessageToDify, ModeType } from '../../../lib/dify';
 import { chatService } from '../../../lib/chatService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { analyticsService } from '../../../lib/analyticsService';
 import { getMobileInfo, categorizeError, getMobileErrorMessage, checkNetworkStatus } from '../../../lib/mobileUtils';
+import { withErrorHandling, transformMessage } from '../utils/validation';
 
-export const useChatSessions = (mode: ModeType = '通常') => {
+interface UseChatSessionsOptions {
+  initialMode: ModeType;
+  batchSize?: number;
+  batchDelay?: number;
+  cacheTTL?: number;
+}
+
+export const useChatSessions = ({
+  initialMode = '通常'
+}: UseChatSessionsOptions) => {
   const { user } = useAuth();
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string>('');
+  const [state, setState] = useState<{
+    chatSessions: ChatSession[];
+    currentChatId: string;
+    currentMode: ModeType;
+  }>({ 
+    chatSessions: [], 
+    currentChatId: '',
+    currentMode: initialMode
+  });
+
+  const { chatSessions, currentChatId, currentMode } = state;
+
+  // State management functions
+  const updateState = useCallback((updates: Partial<typeof state>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const setChatSessions = useCallback((sessions: ChatSession[] | ((prev: ChatSession[]) => ChatSession[])) => {
+    if (typeof sessions === 'function') {
+      updateState({ chatSessions: sessions(state.chatSessions) });
+    } else {
+      updateState({ chatSessions: sessions });
+    }
+  }, [state.chatSessions, updateState]);
+
+  const setCurrentChatId = useCallback((id: string) => {
+    updateState({ currentChatId: id });
+  }, [updateState]);
+
+  const setCurrentMode = useCallback(async (mode: ModeType) => {
+    updateState({ currentMode: mode });
+    if (currentChatId) {
+      try {
+        const modeMessage = transformMessage({
+          id: crypto.randomUUID(),
+          text: `${mode}モードに切り替えました`,
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'mode_change'
+        });
+
+        const messageId = await chatService.saveMessage(currentChatId, modeMessage.text, modeMessage.sender);
+        
+        if (messageId) {
+          setChatSessions((prev) =>
+            prev.map((chat) =>
+              chat.id === currentChatId
+                ? {
+                    ...chat,
+                    messages: [...chat.messages, modeMessage],
+                    lastMessage: new Date(),
+                  }
+                : chat
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error updating mode:', error);
+      }
+    }
+  }, [updateState, currentChatId, setChatSessions]);
+
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const currentChat = chatSessions.find((c) => c.id === currentChatId);
-  const messages = currentChat?.messages ?? [];
 
-  // 初期データの読み込み
-  useEffect(() => {
-    const loadChatSessions = async () => {
-      if (!user?.id) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const sessions = await chatService.getChatSessions(user.id);
-        setChatSessions(sessions);
-        
-        if (sessions.length > 0) {
-          setCurrentChatId(sessions[0].id);
-        } else {
-          // セッションがない場合は新しいセッションを作成
-          await createNewChat();
-        }
-      } catch (error) {
-        console.error('Error loading chat sessions:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadChatSessions();
-  }, [user?.id]);
-
-  const updateChatTitle = async (chatId: string, firstMessage: string) => {
-    const newTitle = firstMessage.length > 30
-      ? `${firstMessage.substring(0, 30)}…`
-      : firstMessage;
-
-    // ローカル状態を更新
-    setChatSessions((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? { ...chat, title: newTitle }
-          : chat,
-      ),
-    );
-
-    // データベースに保存
-    await chatService.updateSessionTitle(chatId, newTitle);
-  };
-
-  const selectChat = (id: string) => {
-    setCurrentChatId(id);
-  };
-
-  const createNewChat = async () => {
+  const createNewChat = useCallback(async function createNewChat() {
     if (!user?.id) return;
 
-    try {
+    await withErrorHandling(async () => {
       const sessionId = await chatService.createChatSession(user.id);
       if (!sessionId) return;
 
-      // 初期AIメッセージを保存
-      const initialMessage = 'こんにちは！私はAIアシスタントです。何かお手伝いできることはありますか？';
-      await chatService.saveMessage(sessionId, initialMessage, 'ai');
+      const initialMessage = transformMessage({
+        id: crypto.randomUUID(),
+        text: `こんにちは！私はAIアシスタントです。
+初めてご利用いただきありがとうございます。医療に関する一般的な質問に回答させていただきます。
 
-      // 新しいセッションをローカル状態に追加
+ご不明な点がございましたら、お気軽にお尋ねください。`,
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'normal'
+      });
+
+      await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender);
+
       const newChat: ChatSession = {
         id: sessionId,
         title: '新しいチャット',
-        messages: [
-          {
-            id: crypto.randomUUID(),
-            text: initialMessage,
-            sender: 'ai',
-            timestamp: new Date(),
-          },
-        ],
+        messages: [initialMessage],
         lastMessage: new Date(),
         user_id: user.id,
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          currentMode: currentMode,
+          messageCount: 1,
+          hasUnread: false
+        }
       };
 
-      setChatSessions((prev) => [newChat, ...prev]);
-      setCurrentChatId(sessionId);
-    } catch (error) {
+      setState(prevState => ({
+        ...prevState,
+        chatSessions: [newChat, ...prevState.chatSessions],
+        currentChatId: sessionId
+      }));
+    }, (error) => {
       console.error('Error creating new chat:', error);
-    }
-  };
+    });
+  }, [user?.id, currentMode, setChatSessions, setCurrentChatId]);
 
-  const deleteChat = async (
-    chatId: string,
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-  ) => {
-    e.stopPropagation();
-    if (chatSessions.length === 1) return;
+  const loadChatSessions = useCallback(async function loadChatSessions() {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const sessions = await chatService.getChatSessions(user.id);
+      setChatSessions(sessions);
+      
+      // 新規チャットを作成して選択
+      await createNewChat();
+    } catch (error) {
+      console.error('Error loading chat sessions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, createNewChat]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadChatSessions();
+    }
+  }, [user?.id]);
+
+
+  const selectChat = useCallback(async function selectChat(id: string) {
+    setCurrentChatId(id);
+    
+    const switchMessage = transformMessage({
+      id: crypto.randomUUID(),
+      text: 'チャットを切り替えました',
+      sender: 'ai',
+      timestamp: new Date(),
+      type: 'mode_change'
+    });
 
     try {
-      const success = await chatService.deleteChatSession(chatId);
-      if (success) {
-        setChatSessions((prev) => {
-          const updated = prev.filter((c) => c.id !== chatId);
-          if (currentChatId === chatId && updated.length > 0) {
-            setCurrentChatId(updated[0].id);
-          }
-          return updated;
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting chat:', error);
-    }
-  };
+      setChatSessions((prev) =>
+        prev.map((chat) =>
+          chat.id === id
+            ? {
+                ...chat,
+                messages: [...chat.messages, switchMessage],
+                lastMessage: new Date(),
+              }
+            : chat
+        )
+      );
 
-  const sendMessage = async (inputText: string, audioFile?: File) => {
+      await chatService.saveMessage(id, switchMessage.text, switchMessage.sender);
+    } catch (error) {
+      console.error('Error switching chat:', error);
+    }
+  }, [setChatSessions, setCurrentChatId]);
+
+  const deleteChat = useCallback(async (chatId: string) => {
+    await withErrorHandling(async () => {
+      await chatService.deleteChatSession(chatId);
+      setChatSessions(prev => prev.filter(chat => chat.id !== chatId));
+      if (currentChatId === chatId) {
+        const remainingSessions = chatSessions.filter(chat => chat.id !== chatId);
+        if (remainingSessions.length > 0) {
+          setCurrentChatId(remainingSessions[0].id);
+        } else {
+          setCurrentChatId('');
+        }
+      }
+    }, (error) => {
+      console.error('Error deleting chat:', error);
+    });
+  }, [chatSessions, currentChatId, setChatSessions, setCurrentChatId]);
+
+  const sendMessage = useCallback(async function sendMessage(inputText: string, audioFile?: File) {
     if ((!inputText.trim() && !audioFile) || !currentChatId) return;
 
-    // ユーザーメッセージのテキスト作成
-    let messageText = inputText.trim();
-    if (audioFile && !messageText) {
-      messageText = `音声ファイル「${audioFile.name}」を分析してください。`;
-    } else if (audioFile && messageText) {
-      messageText = `${messageText}\n\n[音声ファイル: ${audioFile.name}]`;
-    }
+    console.log('Sending message:', { inputText, hasAudioFile: !!audioFile, currentChatId });
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      text: messageText,
-      sender: 'user',
-      timestamp: new Date(),
-    };
+    await withErrorHandling(async () => {
+      const messageText = audioFile
+        ? !inputText.trim()
+          ? `音声ファイル「${audioFile.name}」を分析してください。`
+          : `${inputText.trim()}\n\n[音声ファイル: ${audioFile.name}]`
+        : inputText.trim();
 
-    // ローカル状態を更新
-    setChatSessions((prev) =>
-      prev.map((chat) =>
-        chat.id === currentChatId
-          ? {
-              ...chat,
-              messages: [...chat.messages, userMessage],
-              lastMessage: new Date(),
-            }
-          : chat,
-      ),
-    );
+      const isSystemMessage = messageText.includes('モードを') || 
+                            messageText.includes('チャットを切り替えました');
 
-    // データベースに保存
-    await chatService.saveMessage(currentChatId, userMessage.text, 'user');
-    
-    // 分析追跡
-    analyticsService.trackChatMessage(userMessage.text.length, true);
-
-    // 初回メッセージの場合はタイトルを更新
-    const currentSession = chatSessions.find(c => c.id === currentChatId);
-    if (currentSession && currentSession.messages.length === 1) {
-      await updateChatTitle(currentChatId, userMessage.text);
-    }
-
-    setIsTyping(true);
-
-    try {
-      // ネットワーク状態の事前チェック
-      const mobileInfo = getMobileInfo();
-      console.log('Mobile info:', mobileInfo);
-      
-      if (mobileInfo.isMobile && !mobileInfo.online) {
-        throw new Error('オフライン状態です。インターネット接続を確認してください。');
-      }
-      
-      // モバイルの場合はネットワーク接続をテスト
-      if (mobileInfo.isMobile) {
-        const networkOk = await checkNetworkStatus();
-        if (!networkOk) {
-          throw new Error('ネットワーク接続が不安定です。');
-        }
-      }
-      
-      console.log('Starting Dify API call for message:', { 
-        mode, 
-        messageLength: userMessage.text.length,
-        hasAudioFile: !!audioFile,
-        mobileInfo
-      });
-      
-      const difyRes = await sendMessageToDify(
-        audioFile ? inputText.trim() || '音声ファイルを分析してください。' : userMessage.text, 
-        mode, 
-        audioFile
-      );
-      console.log('Dify API call completed successfully');
-      const aiMessageText = difyRes.answer ?? '（回答が空でした）';
-
-      const aiMessage: ChatMessage = {
+      const userMessage = transformMessage({
         id: crypto.randomUUID(),
-        text: aiMessageText,
-        sender: 'ai',
+        text: messageText,
+        sender: isSystemMessage ? 'ai' : 'user',
         timestamp: new Date(),
-      };
+        type: isSystemMessage ? 'mode_change' : 'normal'
+      });
 
-      // ローカル状態を更新
-      setChatSessions((prev) =>
-        prev.map((chat) =>
+      // まずローカル状態を更新
+      setState(prevState => ({
+        ...prevState,
+        chatSessions: prevState.chatSessions.map(chat =>
           chat.id === currentChatId
             ? {
                 ...chat,
-                messages: [...chat.messages, aiMessage],
+                messages: [...chat.messages, userMessage],
                 lastMessage: new Date(),
               }
-            : chat,
+            : chat
         ),
-      );
+      }));
 
       // データベースに保存
-      await chatService.saveMessage(currentChatId, aiMessageText, 'ai');
+      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender);
       
-      // 分析追跡
-      analyticsService.trackChatMessage(aiMessageText.length, false);
-    } catch (err) {
-      const mobileInfo = getMobileInfo();
-      const errorCategory = categorizeError(err);
-      
-      console.error('Dify API error details:', {
-        error: err,
-        errorMessage: err instanceof Error ? err.message : String(err),
-        errorType: typeof err,
-        errorCategory,
-        mobileInfo,
-        mode
-      });
-      
-      // モバイル向けの分かりやすいエラーメッセージ
-      let errorText = getMobileErrorMessage(errorCategory);
-      
-      // 特定のエラーメッセージがある場合は追加
-      if (err instanceof Error && err.message.length < 200) {
-        if (errorCategory === 'unknown') {
-          errorText += ` (詳細: ${err.message})`;
-        }
+      if (isSystemMessage) {
+        return;
       }
-      
-      // エラー時のフォールバックメッセージ
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        text: errorText,
-        sender: 'ai',
-        timestamp: new Date(),
-      };
 
-      // ローカル状態を更新
-      setChatSessions((prev) =>
-        prev.map((chat) =>
-          chat.id === currentChatId
-            ? {
-                ...chat,
-                messages: [...chat.messages, errorMessage],
-                lastMessage: new Date(),
-              }
-            : chat,
-        ),
-      );
+      // 分析追跡
+      analyticsService.trackChatMessage(userMessage.text.length, true);
 
-      // エラーメッセージもデータベースに保存
-      await chatService.saveMessage(currentChatId, errorMessage.text, 'ai');
-    } finally {
-      setIsTyping(false);
-    }
-  };
+      setIsTyping(true);
+
+      try {
+        // ネットワークチェック
+        const mobileInfo = getMobileInfo();
+        if (mobileInfo.isMobile && !mobileInfo.online) {
+          throw new Error('オフライン状態です。インターネット接続を確認してください。');
+        }
+        
+        if (mobileInfo.isMobile) {
+          const networkOk = await checkNetworkStatus();
+          if (!networkOk) {
+            throw new Error('ネットワーク接続が不安定です。');
+          }
+        }
+
+        let difyRes;
+        try {
+          difyRes = await sendMessageToDify(
+            messageText,
+            currentMode,
+            audioFile
+          );
+          if (!difyRes || !difyRes.answer) {
+            throw new Error('応答の取得に失敗しました。もう一度お試しください。');
+          }
+        } catch (difyError) {
+          console.error('Dify API error:', difyError);
+          if (difyError instanceof Error) {
+            // カスタムエラーメッセージがある場合はそれを使用
+            if (difyError.message.includes('応答時間が長すぎます') || 
+                difyError.message.includes('タイムアウト')) {
+              throw difyError;
+            }
+            // その他のエラーの場合は一般的なメッセージ
+            throw new Error('応答の取得に失敗しました。ネットワーク接続を確認してください。');
+          }
+          throw difyError;
+        }
+
+        const aiMessage = transformMessage({
+          id: crypto.randomUUID(),
+          text: difyRes.answer ?? '（回答が空でした）',
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'normal'
+        });
+
+        // まずローカル状態を更新
+        setState(prevState => ({
+          ...prevState,
+          chatSessions: prevState.chatSessions.map(chat =>
+            chat.id === currentChatId
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, aiMessage],
+                  lastMessage: new Date(),
+                }
+              : chat
+          ),
+        }));
+
+        await chatService.saveMessage(currentChatId, aiMessage.text, aiMessage.sender);
+        analyticsService.trackChatMessage(aiMessage.text.length, false);
+
+      } catch (err) {
+        const errorCategory = categorizeError(err);
+        const errorText = getMobileErrorMessage(errorCategory);
+        
+        const errorMessage = transformMessage({
+          id: crypto.randomUUID(),
+          text: err instanceof Error && err.message.length < 200
+            ? `${errorText} (詳細: ${err.message})`
+            : errorText,
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'normal'
+        });
+
+        setState(prevState => ({
+          ...prevState,
+          chatSessions: prevState.chatSessions.map(chat =>
+            chat.id === currentChatId
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, errorMessage],
+                  lastMessage: new Date(),
+                }
+              : chat
+          ),
+        }));
+
+        await chatService.saveMessage(currentChatId, errorMessage.text, errorMessage.sender);
+      } finally {
+        setIsTyping(false);
+      }
+    }, (error) => {
+      console.error('Error sending message:', error);
+    });
+  }, [currentChatId, currentMode, setChatSessions]);
+
+  const currentChat = chatSessions?.find?.((c) => c.id === currentChatId) || null;
+  const messages = currentChat?.messages ?? [];
 
   return {
     chatSessions,
@@ -286,5 +364,7 @@ export const useChatSessions = (mode: ModeType = '通常') => {
     createNewChat,
     deleteChat,
     sendMessage,
+    currentMode,
+    setCurrentMode,
   };
 };
