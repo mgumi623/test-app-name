@@ -1,49 +1,144 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+
+interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface TeamsContextType {
-  teams: string[];
-  addTeam: (team: string) => void;
-  removeTeam: (team: string) => void;
-  reorderTeams: (teams: string[]) => void;
+  teams: Team[];
+  loading: boolean;
+  error: string | null;
+  addTeam: (team: { name: string; description?: string }) => Promise<void>;
+  removeTeam: (teamId: string) => Promise<void>;
+  updateTeam: (teamId: string, updates: { name?: string; description?: string }) => Promise<void>;
+  reorderTeams: (teamIds: string[]) => Promise<void>;
 }
 
 const TeamsContext = createContext<TeamsContextType | undefined>(undefined);
 
 export function TeamsProvider({ children }: { children: React.ReactNode }) {
-  const [teams, setTeams] = useState<string[]>(['2A', '2B', '3A', '3B', '4A', '4B']);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ローカルストレージからチーム設定を読み込む
-  useEffect(() => {
-    const savedTeams = localStorage.getItem('riha-teams');
-    if (savedTeams) {
-      setTeams(JSON.parse(savedTeams));
+  const fetchTeams = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error: supabaseError } = await supabase
+        .from('teams')
+        .select('*')
+        .order('created_at');
+
+      if (supabaseError) throw supabaseError;
+
+      setTeams(data || []);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+      console.error('Failed to fetch teams:', err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // チーム設定の変更をローカルストレージに保存
-  const saveTeams = (newTeams: string[]) => {
-    localStorage.setItem('riha-teams', JSON.stringify(newTeams));
-    setTeams(newTeams);
-  };
+  const addTeam = async (team: { name: string; description?: string }) => {
+    try {
+      setLoading(true);
+      const { data, error: supabaseError } = await supabase
+        .from('teams')
+        .insert([team])
+        .select()
+        .single();
 
-  const addTeam = (team: string) => {
-    if (!teams.includes(team)) {
-      saveTeams([...teams, team]);
+      if (supabaseError) throw supabaseError;
+
+      setTeams(prev => [...prev, data]);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const removeTeam = (team: string) => {
-    saveTeams(teams.filter(t => t !== team));
+  const removeTeam = async (teamId: string) => {
+    try {
+      setLoading(true);
+      const { error: supabaseError } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', teamId);
+
+      if (supabaseError) throw supabaseError;
+
+      setTeams(prev => prev.filter(team => team.id !== teamId));
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const reorderTeams = (newTeams: string[]) => {
-    saveTeams(newTeams);
+  const updateTeam = async (teamId: string, updates: { name?: string; description?: string }) => {
+    try {
+      setLoading(true);
+      const { data, error: supabaseError } = await supabase
+        .from('teams')
+        .update(updates)
+        .eq('id', teamId)
+        .select()
+        .single();
+
+      if (supabaseError) throw supabaseError;
+
+      setTeams(prev => prev.map(team => team.id === teamId ? data : team));
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const reorderTeams = async (teamIds: string[]) => {
+    // TODO: 順序の永続化が必要な場合は、teams テーブルに order カラムを追加
+    try {
+      setLoading(true);
+      const reorderedTeams = teamIds
+        .map(id => teams.find(team => team.id === id))
+        .filter((team): team is Team => team !== undefined);
+      setTeams(reorderedTeams);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
 
   return (
-    <TeamsContext.Provider value={{ teams, addTeam, removeTeam, reorderTeams }}>
+    <TeamsContext.Provider value={{ teams, loading, error, addTeam, removeTeam, updateTeam, reorderTeams }}>
       {children}
     </TeamsContext.Provider>
   );

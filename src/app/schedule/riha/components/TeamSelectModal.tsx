@@ -22,7 +22,7 @@ export default function TeamSelectModal({ onViewChange }: TeamSelectModalProps) 
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {teams.map((team, index) => {
-            const gradeNumber = parseInt(team.charAt(0));
+            const gradeNumber = parseInt(team.name.charAt(0));
             const colorClasses = {
               2: 'bg-gradient-to-br from-blue-50/80 to-blue-100/50 hover:from-blue-100 hover:to-blue-200/50 border-blue-200/30 text-blue-700',
               3: 'bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 hover:from-emerald-100 hover:to-emerald-200/50 border-emerald-200/30 text-emerald-700',
@@ -31,8 +31,8 @@ export default function TeamSelectModal({ onViewChange }: TeamSelectModalProps) 
 
             return (
               <Button
-                key={team}
-                onClick={() => onViewChange(team)}
+                key={team.id}
+                onClick={() => onViewChange(team.name)}
                 variant="outline"
                 size="lg"
                 className={`
@@ -46,7 +46,7 @@ export default function TeamSelectModal({ onViewChange }: TeamSelectModalProps) 
                   animationFillMode: 'backwards'
                 }}
               >
-                {team}
+                {team.name}
               </Button>
             );
           })}

@@ -1,0 +1,169 @@
+@media print {
+  /* 横向き印刷の設定 */
+  @page {
+    size: landscape;
+    margin: 8mm 5mm;
+  }
+
+  /* 印刷時に不要な要素を非表示 */
+  header,
+  nav,
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  /* コンテナの余白をリセット */
+  main > div,
+  .max-w-7xl {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 印刷時のテーブルレイアウト調整 */
+  .print-table {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+  }
+
+  /* テーブルを横幅いっぱいに表示 */
+  table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 8pt !important;
+  }
+
+  /* 印刷時の行の背景色を調整 */
+  tr.even\:bg-gray-50\/50 {
+    background-color: #f9fafb !important;
+  }
+  
+  /* スティッキーセルの背景色を継承 */
+  .bg-inherit {
+    background-color: inherit !important;
+  }
+
+  /* セルの幅と高さを調整 */
+  th, td {
+    padding: 2px !important;
+    font-size: 9pt !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+    height: 20px !important;
+  }
+
+  /* ヘッダーセルの調整 */
+  th {
+    padding: 2px !important;
+    height: 28px !important;
+    font-weight: 600 !important;
+  }
+
+  /* スタッフ名セルの高さ調整 */
+  td:first-child {
+    height: 20px !important;
+    line-height: 20px !important;
+    font-size: 9pt !important;
+    font-weight: 500 !important;
+  }
+
+  /* スタッフ名セルの役職表示の調整 */
+  td:first-child div {
+    line-height: 1.4 !important;
+    padding: 2px 0 !important;
+  }
+  
+  td:first-child div div {
+    margin-top: 1px !important;
+    line-height: 1.2 !important;
+    font-size: 7.5pt !important;
+  }
+
+  /* 印刷時のレイアウト全体調整 */
+  @media print {
+    html, body {
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .print-table {
+      margin: 0 !important;
+      padding: 8mm 5mm !important;
+      height: auto !important;
+    }
+
+    /* テーブルのサイズ調整 */
+    table {
+      margin: 0 !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* 月表示の余白調整 */
+    .print-table > div:first-child {
+      margin-bottom: 3mm !important;
+    }
+  }
+
+  /* スタッフ名列の幅を固定 */
+  th:first-child,
+  td:first-child {
+    width: 80px !important;
+  }
+
+  /* 日付列の幅を均等に */
+  th:not(:first-child):not(:last-child),
+  td:not(:first-child):not(:last-child) {
+    width: calc((100% - 120px) / 31) !important;
+  }
+
+  /* 出勤日数列の幅を固定 */
+  th:last-child,
+  td:last-child {
+    width: 40px !important;
+  }
+
+  /* 背景色と境界線を強制的に表示 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 固定ヘッダーの調整 */
+  .sticky {
+    position: relative !important;
+  }
+
+  /* テーブルヘッダーの背景色を維持 */
+  thead th {
+    background-color: #f3f4f6 !important;
+    color: #000 !important;
+  }
+
+  /* スクロールバーを非表示 */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 改ページを防止 */
+  .print-table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* フォントサイズの最適化 */
+  .text-sm {
+    font-size: 7pt !important;
+  }
+  .text-xs {
+    font-size: 6pt !important;
+  }
+}

@@ -25,25 +25,11 @@ export class ChatService {
         };
       }
       
-      // 認証状態の確認
-      const { data: { user }, error: authError } = await this.supabase.auth.getUser();
-      console.log('Current user:', user);
-      console.log('Auth error:', authError);
-      
-      if (authError) {
-        console.error('Authentication error:', authError);
-        return { success: false, error: `Authentication error: ${authError.message}` };
-      }
-      
-      if (!user) {
-        console.error('No authenticated user');
-        return { success: false, error: 'No authenticated user' };
-      }
-      
       // テーブルの存在確認
       const { data, error } = await this.supabase
         .from('chat_sessions')
-        .select('count', { count: 'exact', head: true });
+        .select('*')
+        .limit(1);
 
       if (error) {
         console.error('=== DATABASE CONNECTION ERROR ===');

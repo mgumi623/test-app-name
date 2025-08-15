@@ -10,69 +10,97 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Plus, Settings } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { Settings, Save, X } from 'lucide-react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { POSITION_PRIORITY, PROFESSION_PRIORITY, Staff, PROFESSIONS } from '../data/staff';
-import { useTeams } from '../contexts/TeamsContext';
 import { useStaff } from '../contexts/StaffContext';
+import { useTeams } from '../contexts/TeamsContext';
+import { generateStaffData } from '../data/generateStaffData';
+import { PROFESSIONS } from '../data/staff';
 
 interface StaffListProps {
   teamFilter?: string;
 }
 
+type ViewMode = 'list' | 'edit';
+
+interface EditingStaff {
+  id: string;
+  name: string;
+  team: string;
+  position: string;
+  profession: string;
+  years: number;
+}
+
 export default function StaffList({ teamFilter }: StaffListProps) {
-  const { staffList, setStaffList } = useStaff();
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const { staffList, getSortedStaff, getStaffByTeam, createStaff, updateStaff, loading, error, fetchStaff } = useStaff();
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
   const { teams } = useTeams();
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newStaffName, setNewStaffName] = useState('');
-  const [newStaffTeam, setNewStaffTeam] = useState('');
-  const [newStaffPosition, setNewStaffPosition] = useState('');
-  const [newStaffProfession, setNewStaffProfession] = useState('');
-  const [newStaffYears, setNewStaffYears] = useState('');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<EditingStaff | null>(null);
 
-  const sortedStaffList = useMemo(() => {
-    return staffList
-      .filter(staff => !teamFilter || staff.team === teamFilter)
-      .sort((a, b) => {
-        const positionDiff = (POSITION_PRIORITY[b.position] || 0) - (POSITION_PRIORITY[a.position] || 0);
-        if (positionDiff !== 0) return positionDiff;
-        const professionDiff = (PROFESSION_PRIORITY[b.profession] || 0) - (PROFESSION_PRIORITY[a.profession] || 0);
-        if (professionDiff !== 0) return professionDiff;
-        return b.years - a.years;
-      });
-  }, [staffList, teamFilter]);
-
-  const addStaff = () => {
-    if (!newStaffName || !newStaffTeam || !newStaffPosition || !newStaffProfession) return;
-
-    const newStaff = {
-      id: `staff-${staffList.length + 1}`,
-      name: newStaffName,
-      team: newStaffTeam,
-      position: newStaffPosition,
-      profession: newStaffProfession,
-      years: Number(newStaffYears || 1),
-    };
-    setStaffList([...staffList, newStaff]);
-    setNewStaffName('');
-    setNewStaffTeam('');
-    setNewStaffPosition('');
-    setNewStaffProfession('');
-    setNewStaffYears('');
-    setIsAddDialogOpen(false);
+  // スタッフデータを初期化
+  const initializeStaffData = async () => {
+    const newStaffList = generateStaffData();
+    await Promise.all(newStaffList.map(staff => createStaff(staff)));
   };
+
+  // フィルタリングとソート済みのスタッフリスト
+  // チームでフィルタリングされたスタッフリスト
+  const sortedStaffList = useMemo(() => {
+    console.log('StaffList rendering with teamFilter:', teamFilter);
+    const allStaff = getSortedStaff('position', 'desc');
+    console.log('All staff:', allStaff);
+    if (!teamFilter) return allStaff;
+    const filteredStaff = allStaff.filter(staff => staff.team === teamFilter);
+    console.log('Filtered staff:', filteredStaff);
+    return filteredStaff;
+  }, [getSortedStaff, teamFilter]);
+
+  // 編集開始
+  const handleEdit = useCallback((staff: EditingStaff) => {
+    setEditingStaff(staff);
+    setIsEditDialogOpen(true);
+  }, []);
+
+  // 編集保存
+  const handleSave = useCallback(async () => {
+    if (!editingStaff) return;
+
+    try {
+      await updateStaff(editingStaff.id, {
+        name: editingStaff.name,
+        team: editingStaff.team,
+        position: editingStaff.position,
+        profession: editingStaff.profession,
+        years: editingStaff.years
+      });
+      setEditingStaff(null);
+      setIsEditDialogOpen(false);
+    } catch (err) {
+      console.error('Failed to update staff:', err);
+    }
+  }, [editingStaff, updateStaff]);
+
+  // 編集キャンセル
+  const handleCancel = useCallback(() => {
+    setEditingStaff(null);
+    setIsEditDialogOpen(false);
+  }, []);
 
   return (
     <Card className="shadow-md border-slate-200">
       <div className="p-4 border-b flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-900">スタッフ一覧</h2>
         <div className="flex items-center gap-2">
-          <Dialog open={isEditMode} onOpenChange={setIsEditMode}>
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -85,7 +113,19 @@ export default function StaffList({ teamFilter }: StaffListProps) {
             <DialogContent className="max-w-4xl w-full">
               <DialogHeader>
                 <DialogTitle>スタッフ一覧編集</DialogTitle>
+                <p className="text-sm text-gray-500">
+                  スタッフの情報を編集します。
+                </p>
               </DialogHeader>
+              <div className="flex justify-end gap-2 mb-4">
+                <Button 
+                  variant="outline"
+                  onClick={initializeStaffData}
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+                >
+                  スタッフデータを初期化
+                </Button>
+              </div>
               <div className="overflow-y-auto max-h-[60vh]">
                 <Table>
                   <TableHeader>
@@ -95,221 +135,118 @@ export default function StaffList({ teamFilter }: StaffListProps) {
                       <TableHead className="text-slate-600">役職</TableHead>
                       <TableHead className="text-slate-600">職種</TableHead>
                       <TableHead className="text-slate-600">経験年数</TableHead>
-                      <TableHead className="text-slate-600 w-[100px]">操作</TableHead>
+                      <TableHead className="text-slate-600 w-20">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedStaffList.map((staff) => (
                       <TableRow key={staff.id}>
-                        <TableCell>
-                          <Input
-                            value={editingStaff?.id === staff.id ? editingStaff.name : staff.name}
-                            onChange={(e) => {
-                              if (editingStaff?.id === staff.id) {
-                                setEditingStaff({...editingStaff, name: e.target.value});
-                              } else {
-                                setEditingStaff({...staff, name: e.target.value});
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={editingStaff?.id === staff.id ? editingStaff.team : staff.team}
-                            onValueChange={(value) => {
-                              if (editingStaff?.id === staff.id) {
-                                setEditingStaff({...editingStaff, team: value});
-                              } else {
-                                setEditingStaff({...staff, team: value});
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {teams.map((team) => (
-                                <SelectItem key={team} value={team}>{team}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={editingStaff?.id === staff.id ? editingStaff.position : staff.position}
-                            onValueChange={(value) => {
-                              if (editingStaff?.id === staff.id) {
-                                setEditingStaff({...editingStaff, position: value});
-                              } else {
-                                setEditingStaff({...staff, position: value});
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {['一般', '主任', '副主任'].map((pos) => (
-                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={editingStaff?.id === staff.id ? editingStaff.profession : staff.profession}
-                            onValueChange={(value) => {
-                              if (editingStaff?.id === staff.id) {
-                                setEditingStaff({...editingStaff, profession: value});
-                              } else {
-                                setEditingStaff({...staff, profession: value});
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PROFESSIONS.map((prof) => (
-                                <SelectItem key={prof} value={prof}>{prof}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="20"
-                            value={editingStaff?.id === staff.id ? editingStaff.years : staff.years}
-                            onChange={(e) => {
-                              if (editingStaff?.id === staff.id) {
-                                setEditingStaff({...editingStaff, years: Number(e.target.value)});
-                              } else {
-                                setEditingStaff({...staff, years: Number(e.target.value)});
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => {
-                                if (editingStaff?.id === staff.id) {
-                                  setStaffList((prevList: Staff[]) =>
-                                    prevList.map(s =>
-                                      s.id === staff.id ? editingStaff : s
-                                    )
-                                  );
-                                  setEditingStaff(null);
-                                }
-                              }}
-                            >
-                              保存
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => {
-                                setStaffList((prevList: Staff[]) =>
-                                  prevList.filter(s => s.id !== staff.id)
-                                );
-                              }}
-                            >
-                              削除
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {editingStaff?.id === staff.id ? (
+                          <>
+                            <TableCell>
+                              <Input
+                                value={editingStaff.name}
+                                onChange={(e) => setEditingStaff({ ...editingStaff, name: e.target.value })}
+                                className="w-full"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={editingStaff.team}
+                                onValueChange={(value) => setEditingStaff({ ...editingStaff, team: value })}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teams.map((team) => (
+                                    <SelectItem key={team.id} value={team.name}>{team.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={editingStaff.position}
+                                onValueChange={(value) => setEditingStaff({ ...editingStaff, position: value })}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="主任">主任</SelectItem>
+                                  <SelectItem value="副主任">副主任</SelectItem>
+                                  <SelectItem value="一般">一般</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={editingStaff.profession}
+                                onValueChange={(value) => setEditingStaff({ ...editingStaff, profession: value })}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {PROFESSIONS.map((prof) => (
+                                    <SelectItem key={prof} value={prof}>{prof}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={editingStaff.years}
+                                onChange={(e) => setEditingStaff({ ...editingStaff, years: parseInt(e.target.value) || 0 })}
+                                className="w-20"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleSave}
+                                  className="bg-green-50 text-green-700 hover:bg-green-100"
+                                >
+                                  <Save className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancel}
+                                  className="bg-red-50 text-red-700 hover:bg-red-100"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell>{staff.name}</TableCell>
+                            <TableCell>{staff.team}</TableCell>
+                            <TableCell>{staff.position}</TableCell>
+                            <TableCell>{staff.profession}</TableCell>
+                            <TableCell>{staff.years}年目</TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEdit(staff)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                編集
+                              </Button>
+                            </TableCell>
+                          </>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                スタッフを追加
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>新規スタッフ追加</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="name" className="text-sm font-medium text-slate-900">名前</label>
-                  <Input
-                    id="name"
-                    value={newStaffName}
-                    onChange={(e) => setNewStaffName(e.target.value)}
-                    placeholder="例：山田太郎"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="team" className="text-sm font-medium text-slate-900">チーム</label>
-                  <Select value={newStaffTeam} onValueChange={setNewStaffTeam}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="チームを選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams.map((team) => (
-                        <SelectItem key={team} value={team}>{team}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="profession" className="text-sm font-medium text-slate-900">職種</label>
-                  <Select value={newStaffProfession} onValueChange={setNewStaffProfession}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="職種を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PROFESSIONS.map((prof) => (
-                        <SelectItem key={prof} value={prof}>{prof}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="position" className="text-sm font-medium text-slate-900">役職</label>
-                  <Select value={newStaffPosition} onValueChange={setNewStaffPosition}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="役職を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {['一般', '主任', '副主任'].map((pos) => (
-                        <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="years" className="text-sm font-medium text-slate-900">経験年数</label>
-                  <Input
-                    id="years"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={newStaffYears}
-                    onChange={(e) => setNewStaffYears(e.target.value)}
-                    placeholder="例：5"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>キャンセル</Button>
-                <Button onClick={addStaff}>追加</Button>
               </div>
             </DialogContent>
           </Dialog>

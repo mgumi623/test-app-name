@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Send, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useClickTracking } from '../../../hooks/useAnalytics';
 import AudioUpload from './AudioUpload';
 import { ModeType } from './Header';
 
@@ -30,7 +29,6 @@ export default function MessageInput({
   onFileRemove,
 }: MessageInputProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const { handleTrackedClick } = useClickTracking();
   const [showAudioUpload, setShowAudioUpload] = useState(false);
 
   const isMinutesMode = selectedMode === '議事録作成';
@@ -88,7 +86,7 @@ export default function MessageInput({
             className="flex-1 resize-none min-h-[44px] max-h-32 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <Button
-            onClick={handleTrackedClick('send-message-btn', 'button', handleSendWithAudio)}
+            onClick={handleSendWithAudio}
             disabled={
               isTyping || 
               (isMinutesMode ? !selectedAudioFile : !inputText.trim())

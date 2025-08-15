@@ -28,7 +28,7 @@ export default function TypingIndicator() {
             <Bot className="w-4 h-4" />
           </AvatarFallback>
         </Avatar>
-        <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-sm flex-grow">
+        <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-sm inline-block">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Loading size="sm" className="flex-shrink-0" />

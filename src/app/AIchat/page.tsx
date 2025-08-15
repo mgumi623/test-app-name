@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useChatSessions } from './hooks/useChatSessions';
 import { useClipboard } from './hooks/useClipboard';
-import { usePageTracking, useAnalytics } from '../../hooks/useAnalytics';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './components/Sidebar';
 import Header, { ModeType } from './components/Header';
@@ -37,16 +36,10 @@ const AIChatApp: React.FC = () => {
   });
 
   const { copiedMessageId, copyToClipboard } = useClipboard();
-  const { trackFeatureUse } = useAnalytics();
-
-  // ページビュー追跡
-  usePageTracking();
-
 
   const handleSelectChat = (id: string) => {
     selectChat(id);
     setIsSidebarOpen(false);
-    trackFeatureUse('chat_select');
   };
 
   const handleModeChange = (newMode: ModeType) => {
@@ -59,7 +52,6 @@ const AIChatApp: React.FC = () => {
   const handleCreateNewChat = () => {
     createNewChat();
     setIsSidebarOpen(false);
-    trackFeatureUse('create_new_chat');
   };
 
   const handleSendMessage = async (audioFile?: File) => {
@@ -69,7 +61,11 @@ const AIChatApp: React.FC = () => {
     if (audioFile) {
       setSelectedAudioFile(null); // 音声ファイルもクリア
     }
-    await sendMessage(messageText, audioFile);
+    try {
+      await sendMessage(messageText, audioFile);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const handleFileSelect = (file: File) => {
@@ -94,6 +90,12 @@ const AIChatApp: React.FC = () => {
       setSelectedAudioFile(null);
     }
   }, [selectedMode]);
+
+  useEffect(() => {
+    if (chatSessions.length === 0 && !isLoading) {
+      createNewChat();
+    }
+  }, [chatSessions.length, isLoading, createNewChat]);
 
   const handleKeyDown = async (
     e: React.KeyboardEvent<HTMLTextAreaElement>,

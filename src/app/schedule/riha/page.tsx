@@ -11,11 +11,24 @@ import StaffList from './components/StaffList';
 import NavigationButtons from './components/NavigationButtons';
 import TeamSettings from './components/TeamSettings';
 import MinimumStaffSettings from './components/MinimumStaffSettings';
-import TeamSelectModal from './components/TeamSelectModal';
-import PageTransition from './components/PageTransition';
+import dynamic from 'next/dynamic';
 import { TeamsProvider, useTeams } from './contexts/TeamsContext';
+import { ShiftRulesProvider } from './contexts/ShiftRulesContext';
+import { StaffProvider } from './contexts/StaffContext';
+import PageTransition from './components/PageTransition';
+import TeamView from './components/TeamView';
+import { PasswordSettings } from './components/PasswordSettings';
+import AdvancedSettings from './components/AdvancedSettings';
+import { PasswordProvider } from './contexts/PasswordContext';
+import { AdvancedSettingsProvider } from './contexts/AdvancedSettingsContext';
+import { SupabaseProvider } from '@/contexts/SupabaseContext';
+import './styles/print.css';
 
-type ViewType = 'shift' | 'staff' | 'settings' | string;
+const ShiftCreation = dynamic(() => import('./components/ShiftCreation'), {
+  ssr: false,
+});
+
+type ViewType = 'shift' | 'staff' | 'settings' | 'next-month-shift' | string;
 
 function RihaShiftPageContent() {
   const { user } = useAuth();
@@ -26,12 +39,24 @@ function RihaShiftPageContent() {
 
   useEffect(() => {
     if (teams.length > 0) {
-      handleViewChange(teams[0]);
+      handleViewChange('shift');
     }
+  
   }, [teams]);
 
   const handleViewChange = (view: ViewType) => {
-    setCurrentView(view);
+    if (view === currentView) return;
+    
+    console.log('View changing to:', view);
+    const selectedTeam = teams.find(team => team.id === view || team.name === view);
+    if (selectedTeam) {
+      console.log('Selected team:', selectedTeam);
+      setCurrentView(selectedTeam.name);
+    } else if (['shift', 'staff', 'settings', 'next-month-shift'].includes(view)) {
+      setCurrentView(view);
+    } else {
+      setCurrentView('shift');
+    }
   };
 
   if (!user) {
@@ -72,7 +97,9 @@ function RihaShiftPageContent() {
               ? 'スタッフ一覧' 
               : currentView === 'settings'
                 ? '設定'
-                : `${currentView}チーム`
+                : currentView === 'next-month-shift'
+                  ? 'シフト作成'
+                  : `${currentView}チーム`
           }
           subtitle={currentView === 'shift' 
             ? formattedDate 
@@ -80,34 +107,69 @@ function RihaShiftPageContent() {
               ? 'スタッフの登録・管理' 
               : currentView === 'settings'
                 ? 'システム設定'
-                : 'チームメンバー一覧'
+                : currentView === 'next-month-shift'
+                  ? '新規シフトの作成'
+                  : 'チームメンバー一覧'
           }
         />
 
         <main className="flex-1 overflow-auto bg-gray-50 pt-1 px-4">
           <div className="max-w-7xl mx-auto">
-            <PageTransition currentView={currentView}>
-              {currentView === 'staff' ? (
-                <StaffList teamFilter={undefined} />
-              ) : currentView === 'shift' ? (
-                <ShiftTable currentDate={currentDate} onViewChange={handleViewChange} />
-              ) : currentView === 'settings' ? (
-                <div className="space-y-4">
-                  <TeamSettings />
-                  <MinimumStaffSettings />
-                </div>
-              ) : teams.includes(currentView) ? (
-                <ShiftTable
-                  currentDate={currentDate}
-                  teamFilter={currentView}
-                  showTeamSelect={false}
-                />
-              ) : (
-                <ShiftTable
-                  currentDate={currentDate}
-                />
-              )}
-            </PageTransition>
+          <PageTransition currentView={currentView}>
+  <div className="relative">
+    {/* Shift または チームビューのときだけツールバー表示 */}
+    {(currentView === 'shift' || teams.some(t => t.name === currentView)) && null}
+
+    {/* コンテンツ本体 */}
+    {currentView === 'staff' && <StaffList teamFilter={undefined} />}
+
+    {currentView === 'shift' && (
+      <ShiftTable 
+        currentDate={currentDate} 
+        onViewChange={handleViewChange}
+        onMonthChange={(offset) => {
+          const newDate = new Date(currentDate);
+          newDate.setMonth(newDate.getMonth() + offset);
+          setCurrentDate(newDate);
+        }}
+      />
+    )}
+
+    {currentView === 'next-month-shift' && (
+      <TeamsProvider>
+        <ShiftCreation />
+      </TeamsProvider>
+    )}
+
+    {currentView === 'settings' && (
+      <div className="space-y-4">
+        <TeamSettings />
+        <MinimumStaffSettings />
+        <PasswordSettings />
+        <AdvancedSettings />
+      </div>
+    )}
+
+    {teams.some(t => t.name === currentView) && (
+      <TeamView 
+        teamName={currentView} 
+        currentDate={currentDate}
+        onMonthChange={(offset) => {
+          const newDate = new Date(currentDate);
+          newDate.setMonth(newDate.getMonth() + offset);
+          setCurrentDate(newDate);
+        }}
+      />
+    )}
+
+    {/* 万一どれにも該当しない場合のフォールバック */}
+    {!['staff','shift','next-month-shift','settings'].includes(currentView) &&
+      !teams.some(t => t.name === currentView) && (
+        <ShiftTable currentDate={currentDate} />
+    )}
+  </div>
+</PageTransition>
+
           </div>
         </main>
       </div>
@@ -117,8 +179,18 @@ function RihaShiftPageContent() {
 
 export default function RihaShiftPage() {
   return (
-    <TeamsProvider>
-      <RihaShiftPageContent />
-    </TeamsProvider>
+    <SupabaseProvider>
+      <TeamsProvider>
+        <ShiftRulesProvider>
+          <StaffProvider>
+            <PasswordProvider>
+              <AdvancedSettingsProvider>
+                <RihaShiftPageContent />
+              </AdvancedSettingsProvider>
+            </PasswordProvider>
+          </StaffProvider>
+        </ShiftRulesProvider>
+      </TeamsProvider>
+    </SupabaseProvider>
   );
 }

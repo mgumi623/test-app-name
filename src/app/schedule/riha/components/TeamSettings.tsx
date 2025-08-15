@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, X, Plus, Settings2, Users } from 'lucide-react';
+import { GripVertical, X, Plus, Users, Building2 } from 'lucide-react';
 import { useTeams } from '../contexts/TeamsContext';
 import {
   Dialog,
@@ -25,61 +25,74 @@ import {
 export default function TeamSettings() {
   const { teams, addTeam, removeTeam, reorderTeams } = useTeams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newTeam, setNewTeam] = useState('');
+  const [newTeam, setNewTeam] = useState({ name: '', description: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const teamName = newTeam.trim();
+    const teamName = newTeam.name.trim();
     
     if (!teamName) {
       toast.error("チーム名を入力してください");
       return;
     }
 
-    if (teams.includes(teamName)) {
+    if (teams.some(team => team.name === teamName)) {
       toast.error("そのチーム名は既に存在します");
       return;
     }
 
-    addTeam(teamName);
-    setIsDialogOpen(false);
-    setNewTeam('');
-    toast.success("チームを追加しました");
+    try {
+      await addTeam({ name: teamName, description: newTeam.description });
+      setIsDialogOpen(false);
+      setNewTeam({ name: '', description: '' });
+      toast.success("チームを追加しました");
+    } catch (error) {
+      toast.error("チームの追加に失敗しました");
+    }
   };
 
-  const handleDragEnd = (result: any) => {
+  const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
 
-    const newTeamOrder = Array.from(teams);
-    const [reorderedItem] = newTeamOrder.splice(result.source.index, 1);
-    newTeamOrder.splice(result.destination.index, 0, reorderedItem);
+    try {
+      const newTeamOrder = Array.from(teams);
+      const [reorderedItem] = newTeamOrder.splice(result.source.index, 1);
+      newTeamOrder.splice(result.destination.index, 0, reorderedItem);
 
-    reorderTeams(newTeamOrder);
-    toast.success("チームの順序を更新しました");
+      const newTeamIds = newTeamOrder.map(team => team.id);
+      await reorderTeams(newTeamIds);
+      toast.success("チームの順序を更新しました");
+    } catch (error) {
+      toast.error("順序の更新に失敗しました");
+    }
   };
 
-  const handleRemoveTeam = (team: string) => {
-    removeTeam(team);
-    toast.success("チームを削除しました");
+  const handleRemoveTeam = async (teamId: string) => {
+    try {
+      await removeTeam(teamId);
+      toast.success("チームを削除しました");
+    } catch (error) {
+      toast.error("チームの削除に失敗しました");
+    }
   };
 
   return (
-    <Card className="divide-y divide-gray-200">
+    <Card className="shadow-sm border-gray-200">
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="team-settings" className="border-none">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-green-50/30 data-[state=open]:bg-green-50/50">
             <div className="flex items-center gap-3">
-              <Settings2 className="w-5 h-5 text-gray-500" />
+              <Building2 className="w-5 h-5 text-green-600" />
               <span className="font-medium text-gray-900">チーム設定</span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-6">
             <div className="space-y-4">
-              <div className="flex gap-2">
+              <div className="flex justify-end mb-4">
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
-                      className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800"
+                      className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 w-40"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       チームを追加
@@ -94,11 +107,25 @@ export default function TeamSettings() {
                         <label className="text-sm font-medium">
                           チーム名
                         </label>
-                        <Input
-                          value={newTeam}
-                          onChange={(e) => setNewTeam(e.target.value)}
-                          placeholder="例: 2A, 3B など"
-                        />
+                        <div className="space-y-4">
+                          <div>
+                            <Input
+                              value={newTeam.name}
+                              onChange={(e) => setNewTeam(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="例: 2A, 3B など"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">
+                              説明（オプション）
+                            </label>
+                            <Input
+                              value={newTeam.description}
+                              onChange={(e) => setNewTeam(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="チームの説明を入力"
+                            />
+                          </div>
+                        </div>
                       </div>
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)} type="button">
@@ -121,7 +148,7 @@ export default function TeamSettings() {
                         className="space-y-2"
                       >
                         {teams.map((team, index) => (
-                          <Draggable key={team} draggableId={team} index={index}>
+                          <Draggable key={team.id} draggableId={team.id} index={index}>
                             {(provided) => (
                               <div
                                 ref={provided.innerRef}
@@ -134,14 +161,19 @@ export default function TeamSettings() {
                                 >
                                   <GripVertical className="w-4 h-4 text-slate-400" />
                                 </div>
-                                <div className="flex items-center gap-2 flex-1">
-                                  <Users className="w-4 h-4 text-gray-400" />
-                                  <span>{team}</span>
+                                <div className="flex flex-col flex-1 gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-gray-400" />
+                                    <span className="font-medium">{team.name}</span>
+                                  </div>
+                                  {team.description && (
+                                    <span className="text-sm text-gray-500 ml-6">{team.description}</span>
+                                  )}
                                 </div>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleRemoveTeam(team)}
+                                  onClick={() => handleRemoveTeam(team.id)}
                                   className="opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600"
                                 >
                                   <X className="w-4 h-4" />

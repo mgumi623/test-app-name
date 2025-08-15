@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Settings2 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -40,7 +40,7 @@ export default function MinimumStaffSettings() {
     } else {
       // デフォルト値を設定
       const defaultConfig = teams.reduce((acc, team) => {
-        acc[team] = 1;
+        acc[team.id] = 1;
         return acc;
       }, {} as MinStaffConfig);
       setMinStaffConfig(defaultConfig);
@@ -71,12 +71,12 @@ export default function MinimumStaffSettings() {
   };
 
   return (
-    <Card className="divide-y divide-gray-200">
+    <Card className="shadow-sm border-gray-200">
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="min-staff" className="border-none">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-gray-50">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-green-50/30 data-[state=open]:bg-green-50/50">
             <div className="flex items-center gap-3">
-              <Settings2 className="w-5 h-5 text-gray-500" />
+              <Users className="w-5 h-5 text-green-600" />
               <span className="font-medium text-gray-900">最低出勤人数設定</span>
             </div>
           </AccordionTrigger>
@@ -124,20 +124,20 @@ export default function MinimumStaffSettings() {
                   </TableHeader>
                   <TableBody>
                     {teams.map((team) => (
-                      <TableRow key={team}>
-                        <TableCell className="font-medium">{team}チーム</TableCell>
+                      <TableRow key={team.id}>
+                        <TableCell className="font-medium">{team.name}チーム</TableCell>
                         <TableCell>
                           {isEditing ? (
                             <Input
                               type="number"
                               min={1}
                               max={20}
-                              value={tempConfig[team] || 1}
-                              onChange={(e) => handleValueChange(team, e.target.value)}
+                              value={tempConfig[team.id] || 1}
+                              onChange={(e) => handleValueChange(team.id, e.target.value)}
                               className="w-24"
                             />
                           ) : (
-                            <span>{minStaffConfig[team] || 1}人</span>
+                            <span>{minStaffConfig[team.id] || 1}人</span>
                           )}
                         </TableCell>
                       </TableRow>

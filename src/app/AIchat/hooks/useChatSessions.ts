@@ -3,7 +3,6 @@ import { ChatSession } from '../types/chat';
 import { sendMessageToDify, ModeType } from '../../../lib/dify';
 import { chatService } from '../../../lib/chatService';
 import { useAuth } from '../../../contexts/AuthContext';
-import { analyticsService } from '../../../lib/analyticsService';
 import { getMobileInfo, categorizeError, getMobileErrorMessage, checkNetworkStatus } from '../../../lib/mobileUtils';
 import { withErrorHandling, transformMessage } from '../utils/validation';
 
@@ -115,7 +114,8 @@ export const useChatSessions = ({
           updatedAt: new Date(),
           currentMode: currentMode,
           messageCount: 1,
-          hasUnread: false
+          hasUnread: false,
+          isTemporary: false
         }
       };
 
@@ -140,8 +140,12 @@ export const useChatSessions = ({
       const sessions = await chatService.getChatSessions(user.id);
       setChatSessions(sessions);
       
-      // 新規チャットを作成して選択
-      await createNewChat();
+      // セッションが空の場合のみ新規チャットを作成
+      if (sessions.length === 0) {
+        await createNewChat();
+      } else {
+        setCurrentChatId(sessions[0].id);
+      }
     } catch (error) {
       console.error('Error loading chat sessions:', error);
     } finally {
@@ -158,6 +162,35 @@ export const useChatSessions = ({
 
   const selectChat = useCallback(async function selectChat(id: string) {
     setCurrentChatId(id);
+    
+    const session = chatSessions.find(chat => chat.id === id);
+    if (!session?.messages?.length) {
+      const initialMessage = transformMessage({
+        id: crypto.randomUUID(),
+        text: `こんにちは！私はAIアシスタントです。
+医療に関する一般的な質問に回答させていただきます。
+
+ご不明な点がございましたら、お気軽にお尋ねください。`,
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'normal'
+      });
+
+      setChatSessions((prev) =>
+        prev.map((chat) =>
+          chat.id === id
+            ? {
+                ...chat,
+                messages: [initialMessage],
+                lastMessage: new Date(),
+              }
+            : chat
+        )
+      );
+
+      await chatService.saveMessage(id, initialMessage.text, initialMessage.sender);
+      return;
+    }
     
     const switchMessage = transformMessage({
       id: crypto.randomUUID(),
@@ -203,9 +236,57 @@ export const useChatSessions = ({
     });
   }, [chatSessions, currentChatId, setChatSessions, setCurrentChatId]);
 
+  // メッセージからタイトルを生成する関数
+  const generateTitle = (text: string): string => {
+    // メッセージから最初の文を抽出
+    const firstSentence = text.split(/[\n\.\?？]/).filter(s => s.trim())[0];
+    
+    // 文が長すぎる場合は省略
+    const maxLength = 20;
+    if (firstSentence.length <= maxLength) {
+      return firstSentence.trim();
+    }
+    return firstSentence.substring(0, maxLength).trim() + '...';
+  };
+
   const sendMessage = useCallback(async function sendMessage(inputText: string, audioFile?: File) {
     if ((!inputText.trim() && !audioFile) || !currentChatId) return;
+    const currentSession = chatSessions.find(session => session.id === currentChatId);
+    
+    // 一時的なチャットの場合、最初のメッセージ送信時に永続化
+    if (currentSession?.metadata?.isTemporary) {
+      const sessionId = await chatService.createChatSession(user?.id || '');
+      if (!sessionId) return;
 
+      // メッセージの永続化
+      await Promise.all([
+        ...currentSession.messages.map(msg =>
+          chatService.saveMessage(sessionId, msg.text, msg.sender)
+        )
+      ]);
+
+      // メッセージからタイトルを生成
+      const newTitle = generateTitle(inputText);
+
+      // チャットセッションの更新
+      setState(prevState => ({
+        ...prevState,
+        chatSessions: prevState.chatSessions.map(chat =>
+          chat.id === currentChatId
+            ? {
+                ...chat,
+                id: sessionId,
+                metadata: {
+                  ...chat.metadata,
+                  isTemporary: false
+                },
+                title: newTitle
+              }
+            : chat
+        ),
+        currentChatId: sessionId
+      }));
+    }
     console.log('Sending message:', { inputText, hasAudioFile: !!audioFile, currentChatId });
 
     await withErrorHandling(async () => {
@@ -247,8 +328,6 @@ export const useChatSessions = ({
         return;
       }
 
-      // 分析追跡
-      analyticsService.trackChatMessage(userMessage.text.length, true);
 
       setIsTyping(true);
 
@@ -313,7 +392,6 @@ export const useChatSessions = ({
         }));
 
         await chatService.saveMessage(currentChatId, aiMessage.text, aiMessage.sender);
-        analyticsService.trackChatMessage(aiMessage.text.length, false);
 
       } catch (err) {
         const errorCategory = categorizeError(err);

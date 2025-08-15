@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarDays, Users, X, Settings } from 'lucide-react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTeams } from '../../contexts/TeamsContext';
 import {
@@ -29,16 +30,17 @@ export default function Sidebar({
 }: SidebarProps) {
   const { teams } = useTeams();
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { id: 'shift', label: 'シフト表示', icon: CalendarDays },
     ...teams.map(team => ({
-      id: team,
-      label: `${team}チーム`,
+      id: team.name,
+      label: `${team.name}チーム`,
       icon: Users,
+      type: 'team'
     })),
     { id: 'staff', label: 'スタッフ一覧', icon: Users },
     { id: 'settings', label: '設定', icon: Settings },
-  ] as const;
+  ], [teams]) as const;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -58,7 +60,9 @@ export default function Sidebar({
                 <Button
                   key={item.id}
                   onClick={() => {
-                    onViewChange(item.id);
+                    const view = item.id;
+                    console.log('Selecting view:', view);
+                    onViewChange(view);
                     onClose();
                   }}
                   variant="ghost"

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { useErrorTracking } from '@/hooks/useAnalytics';
+import { SupabaseProvider } from '@/contexts/SupabaseContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Toaster } from 'sonner';
 
@@ -12,8 +12,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
-  // グローバルエラー追跡
-  useErrorTracking();
 
   useEffect(() => {
     // 初回マウント後に表示開始
@@ -34,8 +32,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <AuthProvider>
-      <ProtectedRoute>
+    <SupabaseProvider>
+      <AuthProvider>
+        <ProtectedRoute>
         <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={pathname}
@@ -55,5 +54,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </AnimatePresence>
         </ProtectedRoute>
       </AuthProvider>
+    </SupabaseProvider>
   );
 }
