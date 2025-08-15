@@ -26,7 +26,7 @@ interface StaffContextType {
   fetchStaff: () => Promise<void>;
 
   // フィルタ・ソート機能
-  getStaffByTeam: (team: string) => Staff[];
+  getStaffByTeam: (team: string) => Promise<Staff[]>;
   getStaffByTeams: (teams: string[]) => Staff[];
   getSortedStaff: (field: SortField, direction?: SortDirection, teamFilter?: string | string[]) => Staff[];
   searchStaff: (query: string) => Staff[];

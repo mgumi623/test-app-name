@@ -40,7 +40,7 @@ export default function Sidebar({
     })),
     { id: 'staff', label: 'スタッフ一覧', icon: Users },
     { id: 'settings', label: '設定', icon: Settings },
-  ], [teams]) as const;
+  ], [teams]);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>

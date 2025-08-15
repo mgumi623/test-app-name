@@ -8,6 +8,7 @@ export interface Staff {
 }
 
 export interface ShiftEntry {
+  manuallyEdited?: boolean;
   staffId: string;
   date: number;
   leaveType?: LeaveType;

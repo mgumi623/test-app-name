@@ -14,7 +14,7 @@
  * 5. 出勤は空白表示
  */
 
-import { Staff } from '../types';
+import { Staff } from '../data/staff';
 import { validateShifts } from './validateShifts';
 import { addDays, startOfWeek, format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
@@ -36,11 +36,13 @@ interface ShiftSettings {
  * @property isWorking - 出勤かどうか
  * @property leaveType - 休暇の種類（休み・有給など）
  */
-interface GeneratedShift {
+import { ShiftEntry } from '../types';
+
+interface GeneratedShift extends Omit<ShiftEntry, 'manuallyEdited'> {
   staffId: string;
   date: number;
   isWorking: boolean;
-  leaveType?: string;
+  leaveType?: '希望休' | '休み' | '有給' | '夏季' | '特別休暇';
 }
 
 /**
@@ -77,7 +79,7 @@ export async function generateMonthlyShifts(
   staff: Staff[],
   currentDate: Date,
   existingShifts: ShiftEntry[] = []
-): Promise<GeneratedShift[]> {
+): Promise<ShiftEntry[]> {
   // 管理者設定を取得
   const { data: settingsData } = await supabase
     .from('admin_settings')
@@ -89,7 +91,7 @@ export async function generateMonthlyShifts(
     weekly_sunday: true
   };
 
-  const shifts: GeneratedShift[] = [];
+  const shifts: ShiftEntry[] = [];
   const daysInMonth = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth() + 1,
@@ -151,9 +153,10 @@ export async function generateMonthlyShifts(
               shift => shift.staffId === otherSenior?.id && shift.date === shiftDate.getDate()
             );
 
-            if (otherSeniorShift?.leaveType === '休') {
+            if (otherSeniorShift?.leaveType === '休み') {
               // もう一人が休みの場合は出勤
               shifts.push({
+                manuallyEdited: false,
                 staffId: s.id,
                 date: shiftDate.getDate(),
                 isWorking: true
@@ -167,13 +170,15 @@ export async function generateMonthlyShifts(
               staffId: s.id,
               date: shiftDate.getDate(),
               isWorking: false,
-              leaveType: '休'
+              leaveType: '休み',
+              manuallyEdited: false
             });
           } else {
             shifts.push({
               staffId: s.id,
               date: shiftDate.getDate(),
-              isWorking: true
+              isWorking: true,
+              manuallyEdited: false
             });
           }
         }
@@ -223,7 +228,7 @@ export function validateWeeklyShifts(
 
     // 各週のシフトを検証
     for (const weekShifts of weeklyShifts.values()) {
-      const daysOff = weekShifts.filter(s => s.leaveType === '休').length;
+      const daysOff = weekShifts.filter(s => s.leaveType === '休み').length;
       if (daysOff !== 2) {
         return false;
       }

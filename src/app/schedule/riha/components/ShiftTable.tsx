@@ -332,7 +332,7 @@ export default function ShiftTable({
                         ${getDay(dateObj) === 6 ? 'border-r-[1px] border-gray-400' : ''}
                         ${entry?.manuallyEdited ? 'bg-yellow-50' : ''} ${
                         entry?.isWorking ? 'text-blue-600' :
-                        entry?.leaveType === '休' ? 'text-red-600' :
+                        entry?.leaveType === '休み' ? 'text-red-600' :
                         entry?.leaveType ? 'text-orange-600' : ''
                       }`}
                       onClick={() => {

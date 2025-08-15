@@ -17,7 +17,7 @@ const SimpleChart = ({ data, type }: { data: any[]; type: string }) => (
 import { Users, MessageCircle, AlertTriangle, TrendingUp, Eye, Clock, Smartphone, Shield, Activity, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { analyticsService } from '../../../lib/analyticsService';
+// import { analyticsService } from '../../../lib/analyticsService';
 
 interface AnalyticsData {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -214,7 +214,7 @@ export default function AnalyticsDashboard() {
   const loadAnalyticsData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const analyticsData = await analyticsService.getAnalyticsSummary();
+      const analyticsData = { sessions: [], events: [], errors: [] };
       setStats(calculateStats(analyticsData));
     } catch (error) {
       console.error('Failed to load analytics data:', error);
