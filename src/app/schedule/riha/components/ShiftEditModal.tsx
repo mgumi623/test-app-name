@@ -22,7 +22,7 @@ interface ShiftEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentStatus: string;
-  onStatusChange: (newStatus: LeaveType) => void;
+  onStatusChange: (newStatus: LeaveType | '取消') => void;
 }
 
 export function ShiftEditModal({

@@ -71,6 +71,18 @@ export function ShiftRulesProvider({ children }: { children: React.ReactNode }) 
   const fetchRules = useCallback(async () => {
     try {
       setLoading(true);
+      // まずテーブルの存在を確認
+      const { error: tableError } = await supabase
+        .from('shift_rules')
+        .select('id')
+        .limit(1);
+
+      if (tableError) {
+        console.warn('シフトルールテーブルが存在しないようです。デフォルト値を使用します。');
+        setRules([]);
+        return;
+      }
+
       const { data, error: supabaseError } = await supabase
         .from('shift_rules')
         .select('*')
