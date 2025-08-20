@@ -52,7 +52,7 @@ export const useChatOptimized = (sessionId: ID) => {
       abortRef.current?.abort();
       abortRef.current = new AbortController();
 
-      let lastError: any = null;
+      let lastError: Error | null = null;
       
       // バックオフ付きリトライ
       for (let i = 0; i < BACKOFF_DELAYS.length; i++) {
@@ -72,7 +72,7 @@ export const useChatOptimized = (sessionId: ID) => {
           break;
         } catch (e) {
           lastError = e;
-          if ((e as any)?.name === 'AbortError') break;
+          if (e instanceof Error && e.name === 'AbortError') break;
           await new Promise(r => setTimeout(r, BACKOFF_DELAYS[i] * 1000));
         }
       }

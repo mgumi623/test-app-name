@@ -94,7 +94,21 @@ export async function POST(request: NextRequest) {
       console.log('Image uploaded. upload_file_id=', upload_file_id);
 
       // Step 2: /chat-messages に JSON で投げる
-      const chatPayload: any = {
+      interface ChatPayload {
+  query: string;
+  response_mode: 'blocking' | 'streaming';
+  user: string;
+  conversation_id?: string;
+  inputs: {
+    images?: Array<{
+      type: string;
+      transfer_method: string;
+      upload_file_id: string;
+    }>;
+  };
+}
+
+const chatPayload: ChatPayload = {
         query: text || '', // 空でもOK
         response_mode: 'blocking',
         user: userId,
@@ -137,7 +151,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 画像なし（テキストのみ）：そのまま /chat-messages に JSON
-    const textPayload: any = {
+    const textPayload: ChatPayload = {
       query: text,
       response_mode: 'streaming', // 必要に応じて 'blocking' に
       user: userId,

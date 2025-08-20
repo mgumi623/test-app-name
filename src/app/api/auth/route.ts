@@ -21,7 +21,12 @@ export async function POST(req: Request) {
     });
 
     // ユーザー認証
-    const user = records.find((record: any) => 
+    interface UserRecord {
+  staff_id: string;
+  password: string;
+}
+
+const user = records.find((record: UserRecord) => 
       record.staff_id === staff_id && record.password === password
     );
 

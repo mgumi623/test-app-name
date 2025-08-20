@@ -8,7 +8,7 @@ import { AuthContextType, UserProfile } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const debugLog = (message: string, data?: any) => {
+const debugLog = (message: string, data?: unknown) => {
   // デバッグログを常に有効にして問題を特定
   console.log(`[Auth] ${message}`, data || '');
 };
@@ -78,7 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // 初期化時とセッション変更時のユーザー状態の設定
-  const handleSession = async (session: any) => {
+  interface Session {
+  user: User;
+}
+
+const handleSession = async (session: Session | null) => {
     try {
       if (session?.user) {
         debugLog('Setting user from session', session.user);

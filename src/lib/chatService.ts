@@ -59,10 +59,26 @@ export class ChatService {
         return [];
       }
 
-      const mappedSessions = sessions.map((session: any) => ({
+      interface DBChatSession {
+  id: string;
+  title: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  chat_messages?: DBChatMessage[];
+}
+
+interface DBChatMessage {
+  id: string;
+  content: string;
+  sender: string;
+  created_at: string;
+}
+
+const mappedSessions = sessions.map((session: DBChatSession) => ({
         id: session.id,
         title: session.title,
-        messages: (session.chat_messages || []).map((msg: any) => ({
+        messages: (session.chat_messages || []).map((msg: DBChatMessage) => ({
           id: msg.id,
           text: msg.content,
           sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
@@ -119,7 +135,7 @@ export class ChatService {
       const mappedSession = {
         id: session.id,
         title: session.title,
-        messages: (session.chat_messages || []).map((msg: any) => ({
+        messages: (session.chat_messages || []).map((msg: DBChatMessage) => ({
           id: msg.id,
           text: msg.content,
           sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
@@ -162,7 +178,7 @@ export class ChatService {
 
       if (error || !messages) return [];
 
-      return messages.map((msg: any) => ({
+      return messages.map((msg: DBChatMessage) => ({
         id: msg.id,
         text: msg.content,
         sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
@@ -250,7 +266,7 @@ export class ChatService {
       await this.updateSessionTimestamp(sessionId);
 
       console.log('[ChatService] Message saved successfully with sender:', normalizedSender);
-      return (data as any).id as string;
+      return data.id;
     } catch (error) {
       console.error('[ChatService] Error saving message:', error instanceof Error ? error.message : 'Unknown error');
       return null;
@@ -291,7 +307,7 @@ export class ChatService {
   // Realtime購読の設定
   subscribeToMessageInserts(
     options: { table: string; sessionId: string },
-    callback: (payload: any) => void
+    callback: (payload: { new: DBChatMessage }) => void
   ) {
     return this.supabase
       .channel(`chat_messages:${options.sessionId}`)
