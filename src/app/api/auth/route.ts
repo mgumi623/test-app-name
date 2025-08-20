@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const records = parse(csvData, {
       columns: true,
       skip_empty_lines: true
-    });
+    }) as UserRecord[];
 
     // ユーザー認証
     interface UserRecord {

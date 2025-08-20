@@ -1,6 +1,10 @@
 import { supabase } from './supabase';
-import { ChatSession, ChatMessage } from '../app/AIchat/types';
+import { ChatSession, ChatMessage, DatabaseChatSession, DatabaseChatMessage } from '../app/AIchat/types';
 import { handleSupabaseError } from './utils';
+
+interface DBChatSession extends Omit<DatabaseChatSession, 'chat_messages'> {
+  chat_messages?: DatabaseChatMessage[];
+}
 
 // 入力検証関数
 const validateMessageInput = (content: string, sender: string): { isValid: boolean; error?: string } => {
@@ -59,26 +63,10 @@ export class ChatService {
         return [];
       }
 
-      interface DBChatSession {
-  id: string;
-  title: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-  chat_messages?: DBChatMessage[];
-}
-
-interface DBChatMessage {
-  id: string;
-  content: string;
-  sender: string;
-  created_at: string;
-}
-
-const mappedSessions = sessions.map((session: DBChatSession) => ({
+      const mappedSessions = sessions.map((session) => ({
         id: session.id,
         title: session.title,
-        messages: (session.chat_messages || []).map((msg: DBChatMessage) => ({
+        messages: (session.chat_messages || []).map((msg) => ({
           id: msg.id,
           text: msg.content,
           sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
@@ -135,7 +123,7 @@ const mappedSessions = sessions.map((session: DBChatSession) => ({
       const mappedSession = {
         id: session.id,
         title: session.title,
-        messages: (session.chat_messages || []).map((msg: DBChatMessage) => ({
+        messages: (session.chat_messages || []).map((msg) => ({
           id: msg.id,
           text: msg.content,
           sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
@@ -178,7 +166,7 @@ const mappedSessions = sessions.map((session: DBChatSession) => ({
 
       if (error || !messages) return [];
 
-      return messages.map((msg: DBChatMessage) => ({
+      return messages.map((msg) => ({
         id: msg.id,
         text: msg.content,
         sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
@@ -307,7 +295,7 @@ const mappedSessions = sessions.map((session: DBChatSession) => ({
   // Realtime購読の設定
   subscribeToMessageInserts(
     options: { table: string; sessionId: string },
-    callback: (payload: { new: DBChatMessage }) => void
+    callback: (payload: { new: { id: string; session_id: string; content: string; sender: 'user' | 'ai'; created_at: string; } }) => void
   ) {
     return this.supabase
       .channel(`chat_messages:${options.sessionId}`)

@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface ChatPayload {
+  query: string;
+  response_mode: 'blocking' | 'streaming';
+  user: string;
+  conversation_id?: string;
+  inputs: {
+    images?: Array<{
+      type: string;
+      transfer_method: string;
+      upload_file_id: string;
+    }>;
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || '';
@@ -94,21 +108,7 @@ export async function POST(request: NextRequest) {
       console.log('Image uploaded. upload_file_id=', upload_file_id);
 
       // Step 2: /chat-messages に JSON で投げる
-      interface ChatPayload {
-  query: string;
-  response_mode: 'blocking' | 'streaming';
-  user: string;
-  conversation_id?: string;
-  inputs: {
-    images?: Array<{
-      type: string;
-      transfer_method: string;
-      upload_file_id: string;
-    }>;
-  };
-}
-
-const chatPayload: ChatPayload = {
+      const chatPayload: ChatPayload = {
         query: text || '', // 空でもOK
         response_mode: 'blocking',
         user: userId,

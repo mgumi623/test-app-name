@@ -71,8 +71,12 @@ export const useChatOptimized = (sessionId: ID) => {
           lastError = null;
           break;
         } catch (e) {
-          lastError = e;
-          if (e instanceof Error && e.name === 'AbortError') break;
+          if (e instanceof Error) {
+            lastError = e;
+          if (e.name === 'AbortError') break;
+          } else {
+            lastError = new Error(String(e));
+          }
           await new Promise(r => setTimeout(r, BACKOFF_DELAYS[i] * 1000));
         }
       }
