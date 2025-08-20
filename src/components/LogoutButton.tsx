@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
 
 export default function LogoutButton() {
-  const { signOut, profile, user } = useAuth();
+  const { signOut, user } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // ユーザーが認証されていない場合のみnullを返す
@@ -25,35 +25,19 @@ export default function LogoutButton() {
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="text-sm text-muted-foreground">
-        {profile ? (
-          [profile.hospital, profile.department, profile.position]
-            .filter(Boolean)
-            .map((item, index, array) => (
-              <span key={index}>
-                {item}
-                {index < array.length - 1 && <span className="mx-2 text-gray-300">|</span>}
-              </span>
-            ))
-        ) : (
-          <span>ユーザー情報取得中...</span>
-        )}
-      </div>
-      <Button
-        onClick={handleLogout}
-        disabled={isLoggingOut}
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-2 hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition-colors disabled:opacity-50"
-      >
-        {isLoggingOut ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <LogOut className="w-4 h-4" />
-        )}
-        {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
-      </Button>
-    </div>
+    <Button
+      onClick={handleLogout}
+      disabled={isLoggingOut}
+      variant="outline"
+      size="sm"
+      className="w-full flex items-center gap-2 hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition-colors disabled:opacity-50"
+    >
+      {isLoggingOut ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <LogOut className="w-4 h-4" />
+      )}
+      {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+    </Button>
   );
 }

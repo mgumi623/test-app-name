@@ -1,16 +1,17 @@
 'use client';
-import React, { useMemo, useState, useTransition } from 'react';
+import React, { useMemo, useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { OPTIONS } from './data';
 import { Option } from './types';
 import Header from './components/Header';
-import HospitalNews from './components/HospitalNews';
+import Sidebar from './components/Sidebar';
+import SearchPalette from './components/SearchPalette';
+import CategoryFilter from './components/CategoryFilter';
 import LayoutSwitcher, { LayoutType } from './components/LayoutSwitcher';
-import GridLayout from './components/GridLayout';
-import AccordionLayout from './components/AccordionLayout';
+import GridLayout, { SkeletonCard } from './components/GridLayout';
 import ListLayout from './components/ListLayout';
+import HospitalNews from './components/HospitalNews';
 import { useAuth } from '../../contexts/AuthContext';
-import { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import AnnouncementPopup from '@/components/AnnouncementPopup';
@@ -21,7 +22,10 @@ export default function DepartmentSelection() {
   const { user, profile, isLoading } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [currentLayout, setCurrentLayout] = useState<LayoutType>('accordion');
+  const [currentLayout, setCurrentLayout] = useState<LayoutType>('grid');
+  const [sidebarOpen, setSidebarOpen] = useState(true); // デスクトップではデフォルトで開いている
+  const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('すべて');
   
   // アナウンス関連の状態
   const { announcements, getPopupAnnouncements, incrementPopupDisplayCount, loading: announcementsLoading } = useAnnouncements();
@@ -45,10 +49,45 @@ export default function DepartmentSelection() {
     return OPTIONS.filter(option => option.department !== '管理');
   }, [profile, isLoading]);
 
+  // カテゴリフィルタリング
+  const categoryFilteredOptions = useMemo(() => {
+    if (selectedCategory === 'すべて') {
+      return filteredOptions;
+    }
+    return filteredOptions.filter(option => option.department === selectedCategory);
+  }, [filteredOptions, selectedCategory]);
+
+  // カテゴリ一覧とカウント
+  const categories = useMemo(() => {
+    const deps = [...new Set(filteredOptions.map(option => option.department))];
+    return ['すべて', ...deps];
+  }, [filteredOptions]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { 'すべて': filteredOptions.length };
+    filteredOptions.forEach(option => {
+      counts[option.department] = (counts[option.department] || 0) + 1;
+    });
+    return counts;
+  }, [filteredOptions]);
+
   const selectedLabel = useMemo(
-    () => filteredOptions.find((o) => o.id === selectedId)?.label ?? null,
-    [selectedId, filteredOptions]
+    () => categoryFilteredOptions.find((o) => o.id === selectedId)?.label ?? null,
+    [selectedId, categoryFilteredOptions]
   );
+
+  // キーボードショートカット
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchPaletteOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // デバッグ用：localStorage クリア機能
   useEffect(() => {
@@ -151,77 +190,115 @@ export default function DepartmentSelection() {
     setPopupAnnouncements([]);
   };
 
-
   const handleAnnouncementViewed = (announcementId: string) => {
     // 個別のアナウンス表示回数をカウントアップ
     incrementPopupDisplayCount(announcementId);
   };
 
+  // サイドバートグル処理
+  const handleSidebarToggle = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
-  // ローディング中の表示
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
+  // スケルトンカードの配列を生成
+  const skeletonCards = Array.from({ length: 6 }, (_, i) => <SkeletonCard key={i} />);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground">
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
-          <Header />
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950 flex">
+      {/* サイドバー */}
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)}
+        onSidebarToggle={handleSidebarToggle}
+      />
+      
+      {/* メインコンテンツ */}
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-72' : 'lg:ml-0'}`}>
+        {/* ヘッダー */}
+        <Header 
+          onMenuClick={() => setSidebarOpen(true)} 
+          onSearchClick={() => setSearchPaletteOpen(true)}
+          sidebarOpen={sidebarOpen}
+          onSidebarToggle={handleSidebarToggle}
+        />
+        
+        {/* メインコンテンツエリア */}
+        <main className="p-4 lg:p-6">
+          <div className="max-w-6xl mx-auto">
+            <p className="sr-only" role="status" aria-live="polite">
+              {isPending && selectedLabel ? `${selectedLabel} に移動中…` : '項目を選択してください'}
+            </p>
 
+            {/* 病院ニュース - 上部に配置 */}
+            <div className="mb-8">
+              <HospitalNews />
+            </div>
 
-          <p className="sr-only" role="status" aria-live="polite">
-            {isPending && selectedLabel ? `${selectedLabel} に移動中…` : '項目を選択してください'}
-          </p>
+            {/* カテゴリフィルター */}
+            <div className="mb-8">
+              <CategoryFilter
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onCategoryChange={setSelectedCategory}
+                counts={categoryCounts}
+              />
+            </div>
 
-          <LayoutSwitcher 
-            currentLayout={currentLayout} 
-            onLayoutChange={setCurrentLayout} 
-          />
+            {/* レイアウトスイッチャー */}
+            <div className="mb-8">
+              <LayoutSwitcher 
+                currentLayout={currentLayout} 
+                onLayoutChange={setCurrentLayout} 
+              />
+            </div>
 
-          <section aria-label="利用できる項目" className="relative">
-          {currentLayout === 'grid' && (
-            <GridLayout
-              options={filteredOptions}
-              selectedId={selectedId}
-              isPending={isPending}
-              onNavigate={handleNavigate}
-            />
-          )}
-          
-          {currentLayout === 'accordion' && (
-            <AccordionLayout
-              options={filteredOptions}
-              selectedId={selectedId}
-              isPending={isPending}
-              onNavigate={handleNavigate}
-            />
-          )}
-          
-          {currentLayout === 'list' && (
-            <ListLayout
-              options={filteredOptions}
-              selectedId={selectedId}
-              isPending={isPending}
-              onNavigate={handleNavigate}
-            />
-          )}
-        </section>
+            {/* 機能選択エリア */}
+            <section id="services" aria-label="利用できる項目" className="relative bg-white rounded-xl p-8 border border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-neutral-100 mb-8">サービス一覧</h2>
+              
+              {/* ローディング中のスケルトン表示 */}
+              {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                  {skeletonCards}
+                </div>
+              ) : (
+                <>
+                  {currentLayout === 'grid' && (
+                    <GridLayout
+                      options={categoryFilteredOptions}
+                      selectedId={selectedId}
+                      isPending={isPending}
+                      onNavigate={handleNavigate}
+                    />
+                  )}
+                  
+                  {currentLayout === 'list' && (
+                    <ListLayout
+                      options={categoryFilteredOptions}
+                      selectedId={selectedId}
+                      isPending={isPending}
+                      onNavigate={handleNavigate}
+                    />
+                  )}
+                </>
+              )}
+            </section>
 
-          {/* 病院ニュース */}
-          <HospitalNews />
+            {/* フッター */}
+            <footer className="mt-16 text-center text-xs text-gray-500 dark:text-neutral-400">
+              © 2025 Koreha Maenaka ga tukutta. www.
+            </footer>
+          </div>
+        </main>
+      </div>
 
-          {/* フッター */}
-        <footer className="mt-10 sm:mt-14 text-center text-xs text-muted-foreground">
-          © 2025 Koreha Maenaka ga tukutta. www.
-        </footer>
-      </main>
+      {/* 検索パレット */}
+      <SearchPalette
+        options={filteredOptions}
+        onSelect={handleNavigate}
+        isOpen={searchPaletteOpen}
+        onClose={() => setSearchPaletteOpen(false)}
+      />
 
       {/* アナウンスポップアップ */}
       <AnimatePresence>
@@ -237,8 +314,8 @@ export default function DepartmentSelection() {
       {/* ユーザーの reduce-motion 設定に追従 */}
       <style jsx global>{`
         @media (prefers-reduced-motion: no-preference) {
-          .hover\\:-translate-y-[2px]:hover {
-            transform: translateY(-2px);
+          .hover\\:-translate-y-\\[2px\\]:hover {
+            transform: translateY(-8px);
           }
         }
       `}</style>

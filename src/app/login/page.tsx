@@ -154,6 +154,22 @@ export default function LoginPage() {
           box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.15) !important;
           outline: none !important;
         }
+        
+        /* スマホでの文字はみ出し防止 */
+        input {
+          font-size: 14px !important;
+          line-height: 1.4 !important;
+          word-wrap: break-word !important;
+          overflow-wrap: break-word !important;
+        }
+        
+        @media (max-width: 768px) {
+          input {
+            font-size: 16px !important; /* iOSでズームを防ぐ */
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+          }
+        }
       `}</style>
 
                            <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
@@ -166,21 +182,21 @@ export default function LoginPage() {
                                                                        <div className="w-full max-w-2xl animate-fade-in-up relative z-20">
                     {/* ログインフォーム */}
                     <Card 
-                      className="border-0 shadow-2xl bg-white aspect-video"
+                      className="border-0 shadow-2xl bg-white aspect-video md:aspect-video"
                       onClick={(e) => e.stopPropagation()}
                     >
-                                             <div className="flex h-full">
-                                                   {/* 左側：ロゴエリア（3割） */}
-                          <div className="w-3/10 bg-white p-8 flex items-center justify-center">
-                            <img
-                              src="/image/clover.svg"
-                              alt="Clover Logo"
-                              className="w-32 h-32 text-green-600"
-                            />
-                          </div>
-                          
-                                                   {/* 右側：入力フォーム（7割） */}
-                           <div className="w-7/10 p-6 flex flex-col justify-center">
+                                              <div className="flex h-full flex-col md:flex-row">
+                                                    {/* 左側：ロゴエリア（3割） */}
+                           <div className="w-full md:w-3/10 bg-white p-4 md:p-8 flex items-center justify-center">
+                             <img
+                               src="/image/clover.svg"
+                               alt="Clover Logo"
+                               className="w-24 h-24 md:w-32 md:h-32 text-green-600"
+                             />
+                           </div>
+                           
+                                                    {/* 右側：入力フォーム（7割） */}
+                            <div className="w-full md:w-7/10 p-4 md:p-6 flex flex-col justify-center">
                                                      <div className="text-center mb-4">
                              <CardTitle className="text-lg font-semibold text-gray-900 mb-1">ログイン</CardTitle>
                            </div>
@@ -208,7 +224,7 @@ export default function LoginPage() {
                                    name="staff_id"
                                    value={formData.staff_id}
                                    onChange={handleInputChange}
-                                   className="h-10 pl-3 pr-3 border-2 border-gray-200 focus:border-green-600 focus:ring-1 focus:ring-green-600/10 transition-all duration-200 text-sm"
+                                   className="h-10 pl-3 pr-3 border-2 border-gray-200 focus:border-green-600 focus:ring-1 focus:ring-green-600/10 transition-all duration-200 text-sm md:text-base text-xs"
                                    placeholder="例: 12345"
                                    required
                                  />
@@ -227,26 +243,26 @@ export default function LoginPage() {
                                   </label>
                                   <span className="text-xs text-gray-500">設定されたパスワードを入力してください</span>
                                 </div>
-                               <div className="relative">
-                                 <Input
-                                   type={showPassword ? 'text' : 'password'}
-                                   name="password"
-                                   value={formData.password}
-                                   onChange={handleInputChange}
-                                   className="h-10 pl-3 pr-10 border-2 border-gray-200 focus:border-green-600 focus:ring-1 focus:ring-green-600/10 transition-all duration-200 text-sm"
-                                   placeholder="パスワードを入力"
-                                   required
-                                 />
-                                 <Button
-                                   type="button"
-                                   variant="ghost"
-                                   size="icon"
-                                   onClick={() => setShowPassword(!showPassword)}
-                                   className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                                 >
-                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                 </Button>
-                               </div>
+                                <div className="relative">
+                                  <Input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleInputChange}
+                                    className="h-10 pl-3 pr-10 border-2 border-gray-200 focus:border-green-600 focus:ring-1 focus:ring-green-600/10 transition-all duration-200 text-sm md:text-base text-xs"
+                                    placeholder="パスワードを入力"
+                                    required
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                  >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  </Button>
+                                </div>
                              </div>
 
                             {/* ユーザー情報表示 */}

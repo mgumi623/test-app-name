@@ -1,67 +1,46 @@
-import {
-  Activity,
-  Heart,
-  MessageSquare,
-  Bot,
-  BarChart3,
-  Bell,
-  Clock,
-} from 'lucide-react';
 import { Option } from './types';
 
 export const OPTIONS: Option[] = [
   {
-    id: 'all-ai',
-    department: '全部署',
-    label: 'AI Chat',
-    description: 'グループ共通のAIアシスタント',
+    id: 'ai-chat',
+    label: 'AIチャット',
     href: '/AIchat',
-    Icon: Bot,
-    gradient: 'from-emerald-500 to-teal-600',
+    department: '全部署',
+    description: 'AIを活用したチャット機能で、業務に関する質問や相談に対応します。'
   },
   {
-    id: 'nurse-shift',
-    department: '看護部',
-    label: 'シフト',
-    description: '看護師のシフト作成・調整',
-    href: '/schedule/ns',
-    Icon: Heart,
-    gradient: 'from-pink-500 to-rose-600',
-  },
-  {
-    id: 'rehab-shift',
-    department: 'リハビリテーション部',
-    label: 'シフト管理',
-    description: 'リハスタッフのシフト管理',
+    id: 'schedule-riha',
+    label: 'リハビリシフト管理',
     href: '/schedule/riha',
-    Icon: Activity,
-    gradient: 'from-cyan-500 to-sky-600',
+    department: 'リハビリ',
+    description: 'リハビリテーション部門のスケジュール管理とシフト調整を行います。'
   },
   {
-    id: 'all-corporate',
-    department: '全部署',
-    label: '意見交流',
-    description: '社内の意見交換・アイデア共有',
-    href: '/corporate',
-    Icon: MessageSquare,
-    gradient: 'from-violet-500 to-indigo-600',
+    id: 'schedule-ns',
+    label: '看護シフト管理',
+    href: '/schedule/ns',
+    department: '看護',
+    description: '看護部門のスケジュール管理とシフト調整を行います。'
   },
   {
-    id: 'all-announcements',
-    department: '全部署',
-    label: 'アナウンス',
-    description: 'お知らせ・重要な情報の確認・管理',
+    id: 'announcements',
+    label: 'お知らせ',
     href: '/announcements',
-    Icon: Bell,
-    gradient: 'from-yellow-500 to-orange-600',
+    department: '全部署',
+    description: '病院からのお知らせや連絡事項を確認できます。'
+  },
+  {
+    id: 'corporate',
+    label: '社内掲示板',
+    href: '/corporate',
+    department: '全部署',
+    description: '社内での情報共有やコミュニケーションの場です。'
   },
   {
     id: 'admin-analytics',
-    department: '管理',
-    label: '分析ダッシュボード',
-    description: 'サイト利用状況とパフォーマンス分析',
+    label: '管理分析',
     href: '/admin/analytics',
-    Icon: BarChart3,
-    gradient: 'from-orange-500 to-amber-600',
-  },
+    department: '管理',
+    description: '管理者向けの分析機能とレポート生成を行います。'
+  }
 ];

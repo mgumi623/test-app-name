@@ -1,11 +1,9 @@
 import React from 'react';
 
-export type Option = {
+export interface Option {
   id: string;
-  department: string;
   label: string;
-  description: string;
   href: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  gradient: string;
-};
+  department: string;
+  description?: string;
+}
