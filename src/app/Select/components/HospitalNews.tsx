@@ -31,9 +31,11 @@ export default function HospitalNews() {
   ];
 
   return (
-    <div className="mb-12">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">病院ニュース</h2>
-      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+    <div className="mb-6">
+      <div className="bg-white/85 backdrop-blur-sm rounded-xl p-6 border border-gray-200 shadow-lg">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">病院ニュース</h2>
+        </div>
         <div className="space-y-4">
           {news.map((item) => (
             <div

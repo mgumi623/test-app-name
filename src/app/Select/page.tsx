@@ -230,31 +230,38 @@ export default function DepartmentSelection() {
             </p>
 
             {/* 病院ニュース - 上部に配置 */}
-            <div className="mb-8">
+            <div className="mb-6">
               <HospitalNews />
             </div>
 
-            {/* カテゴリフィルター */}
-            <div className="mb-8">
-              <CategoryFilter
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onCategoryChange={setSelectedCategory}
-                counts={categoryCounts}
-              />
-            </div>
-
-            {/* レイアウトスイッチャー */}
-            <div className="mb-8">
-              <LayoutSwitcher 
-                currentLayout={currentLayout} 
-                onLayoutChange={setCurrentLayout} 
-              />
-            </div>
-
             {/* 機能選択エリア */}
-            <section id="services" aria-label="利用できる項目" className="relative bg-white rounded-xl p-8 border border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-neutral-100 mb-8">サービス一覧</h2>
+            <section id="services" aria-label="利用できる項目" className="relative bg-white rounded-xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-neutral-100">サービス一覧</h2>
+              </div>
+
+              {/* 部署選択と表示形式コントロール */}
+              <div className="flex flex-col gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* 部署選択 */}
+                <div className="w-full">
+                  <h3 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">部署選択</h3>
+                  <CategoryFilter
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={setSelectedCategory}
+                    counts={categoryCounts}
+                  />
+                </div>
+
+                {/* 表示形式選択 */}
+                <div className="w-full">
+                  <h3 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">表示形式</h3>
+                  <LayoutSwitcher 
+                    currentLayout={currentLayout} 
+                    onLayoutChange={setCurrentLayout} 
+                  />
+                </div>
+              </div>
               
               {/* ローディング中のスケルトン表示 */}
               {isLoading ? (

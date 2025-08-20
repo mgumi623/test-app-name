@@ -73,18 +73,8 @@ export default function Header({ onMenuClick, onSearchClick, sidebarOpen = false
 
         {/* Right Section */}
         <div className="flex items-center gap-3">
-          {/* Notification Bell */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative h-9 w-9"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </Button>
-
-          {/* User Info - Desktop Only */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* User Info */}
+          <div className="hidden sm:flex items-center gap-3">
             <div className="flex flex-col text-xs text-right">
               <span className="font-medium text-gray-900">
                 {profile?.name || user?.email || 'ユーザー'}
@@ -111,6 +101,16 @@ export default function Header({ onMenuClick, onSearchClick, sidebarOpen = false
               </span>
             </div>
           </div>
+
+          {/* Notification Bell */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative h-9 w-9"
+          >
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          </Button>
         </div>
       </div>
     </header>

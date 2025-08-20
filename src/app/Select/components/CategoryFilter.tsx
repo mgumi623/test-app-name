@@ -17,22 +17,22 @@ export default function CategoryFilter({
   counts 
 }: CategoryFilterProps) {
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
+    <div className="flex flex-wrap gap-1.5">
       {categories.map((category) => (
         <Badge
           key={category}
           variant={selectedCategory === category ? "default" : "secondary"}
           className={`
-            cursor-pointer px-4 py-2 text-sm font-medium transition-all duration-200
+            cursor-pointer px-2 py-1 text-xs font-medium transition-all duration-200
             ${selectedCategory === category 
               ? 'bg-green-600 text-white hover:bg-green-700' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
             }
           `}
           onClick={() => onCategoryChange(category)}
         >
           {category}
-          <span className="ml-2 text-xs opacity-75">
+          <span className="ml-1.5 text-xs opacity-75">
             ({counts[category] || 0})
           </span>
         </Badge>
