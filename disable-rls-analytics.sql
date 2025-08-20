@@ -1,6 +1,15 @@
--- 分析システムテーブルのRLSを完全に無効化（オプション）
--- 注意：これは全てのユーザーがテーブルにアクセスできるようになります
--- Supabaseダッシュボード → SQL Editor で実行してください
+/*
+このSQLファイルは分析システム用テーブルのRow Level Security (RLS)を無効化します：
+
+主な操作：
+1. 全ての分析テーブルでRLSを無効化
+2. 既存のアクセス制御ポリシーを削除
+3. テスト用データの挿入によるアクセス確認
+4. RLS状態の最終確認
+
+注意：このスクリプトを実行すると全てのユーザーがテーブルにアクセス可能になります
+実行環境：Supabaseダッシュボード → SQL Editor
+*/
 
 -- RLSを無効化
 ALTER TABLE analytics_sessions DISABLE ROW LEVEL SECURITY;

@@ -1,4 +1,14 @@
--- Add settings columns to the teams table
+/*
+このSQLファイルはチームテーブルに設定用の列を追加します：
+
+追加される設定：
+- weekly_five_shifts: 週5シフト制の有効/無効
+- week_starts_sunday: 週の開始日を日曜にするかどうか
+- senior_staff_adjustment: ベテランスタッフの調整機能
+
+その他の更新：
+- 更新日時を自動記録するトリガーの更新
+*/
 ALTER TABLE teams
 ADD COLUMN weekly_five_shifts BOOLEAN DEFAULT true,
 ADD COLUMN week_starts_sunday BOOLEAN DEFAULT true,

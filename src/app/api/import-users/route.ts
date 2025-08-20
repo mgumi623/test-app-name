@@ -1,62 +1,89 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Supabaseクライアントの初期化
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-export async function GET() {
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+export async function POST() {
   try {
-    const filePath = path.resolve('./public/staff.csv');
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-
-    const records = parse(fileContent, {
-      columns: true,
-      skip_empty_lines: true,
-    });
-
-    const results = [];
-
-    type StaffRow = {
-    ID: string;
-    name: string;
-    password: string;
-    job: string;
-    role: string;
-    permission: string;
-};
-
-for (const row of records as StaffRow[]) {
-      const email = `${row.ID}@example.com`;
-      const password = row.password || 'Temp1234!';
-
-      const { error } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          login_id: row.ID,
-          name: row.name,
-          job: row.job,
-          role: row.role,
-          permission: row.permission,
-        },
-      });
-
-      results.push({
-        ID: row.ID,
-        status: error ? 'error' : 'success',
-        message: error?.message,
-      });
+    // CSVファイルのパスを指定
+    const csvPath = path.join(process.cwd(), 'src', 'app', 'Login', '承認データ.csv');
+    
+    // CSVファイルを読み込む
+    const csvData = await fs.readFile(csvPath, 'utf-8');
+    
+    // CSVをパース
+    interface CSVRecord {
+      staff_id: string;
+      password: string;
     }
 
-    return NextResponse.json({ results });
-  } catch (err) {
-    console.error('CSV読み込みエラー:', err);
-    return NextResponse.json({ error: 'CSV読み込みまたは登録処理でエラー' }, { status: 500 });
+    const records = parse(csvData, {
+      columns: true,
+      skip_empty_lines: true
+    }) as CSVRecord[];
+
+    const results = [];
+    
+    // 各ユーザーをSupabaseに登録
+    for (const record of records) {
+      const email = `${record.staff_id}@example.com`;
+      const password = record.password;
+      
+      try {
+        // ユーザーを作成
+        const { data, error: createError } = await supabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            staff_id: record.staff_id
+          }
+        });
+
+        if (createError) {
+          results.push({
+            staff_id: record.staff_id,
+            status: 'error',
+            message: createError.message
+          });
+        } else {
+          results.push({
+            staff_id: record.staff_id,
+            status: 'success',
+            user_id: data.user.id
+          });
+        }
+      } catch (error) {
+        results.push({
+          staff_id: record.staff_id,
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      results
+    });
+
+  } catch (error) {
+    console.error('Import error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Import failed' },
+      { status: 500 }
+    );
   }
 }

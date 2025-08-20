@@ -18,7 +18,7 @@ import { Announcement } from '@/types/announcement';
 
 export default function DepartmentSelection() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [currentLayout, setCurrentLayout] = useState<LayoutType>('accordion');
@@ -31,16 +31,19 @@ export default function DepartmentSelection() {
 
   // 権限に基づいてオプションをフィルタリング
   const filteredOptions = useMemo(() => {
-    const userPermission = user?.user_metadata?.permission as string;
+    // ローディング中またはプロファイルが未取得の場合は全オプションを表示
+    if (isLoading || !profile) {
+      return OPTIONS;
+    }
     
-    // 研究員または管理職の場合は全てのオプションを表示
-    if (userPermission === '研究員' || userPermission === '管理職') {
+    // roleを使用して権限チェック
+    if (profile?.role === '管理者' || profile?.role === '研究員' || profile?.position === '管理職') {
       return OPTIONS;
     }
     
     // それ以外の場合は管理部門のオプションを除外
     return OPTIONS.filter(option => option.department !== '管理');
-  }, [user]);
+  }, [profile, isLoading]);
 
   const selectedLabel = useMemo(
     () => filteredOptions.find((o) => o.id === selectedId)?.label ?? null,
@@ -154,6 +157,18 @@ export default function DepartmentSelection() {
     incrementPopupDisplayCount(announcementId);
   };
 
+
+  // ローディング中の表示
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 text-foreground">

@@ -17,154 +17,134 @@ export const useChatSessions = ({
   initialMode = '通常'
 }: UseChatSessionsOptions) => {
   const { user } = useAuth();
-  const [state, setState] = useState<{
-    chatSessions: ChatSession[];
-    currentChatId: string;
-    currentMode: ModeType;
-  }>({ 
-    chatSessions: [], 
-    currentChatId: '',
-    currentMode: initialMode
-  });
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentMode, setCurrentMode] = useState<ModeType>(initialMode);
 
-  const { chatSessions, currentChatId, currentMode } = state;
-
-  // State management functions
-  const updateState = useCallback((updates: Partial<typeof state>) => {
-    setState(prev => ({ ...prev, ...updates }));
-  }, []);
-
-  const setChatSessions = useCallback((sessions: ChatSession[] | ((prev: ChatSession[]) => ChatSession[])) => {
-    if (typeof sessions === 'function') {
-      updateState({ chatSessions: sessions(state.chatSessions) });
-    } else {
-      updateState({ chatSessions: sessions });
-    }
-  }, [state.chatSessions, updateState]);
-
-  const setCurrentChatId = useCallback((id: string) => {
-    updateState({ currentChatId: id });
-  }, [updateState]);
-
-  const setCurrentMode = useCallback(async (mode: ModeType) => {
-    updateState({ currentMode: mode });
-    if (currentChatId) {
-      try {
-        const modeMessage = transformMessage({
-          id: crypto.randomUUID(),
-          text: `${mode}モードに切り替えました`,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'mode_change'
-        });
-
-        const messageId = await chatService.saveMessage(currentChatId, modeMessage.text, modeMessage.sender);
-        
-        if (messageId) {
-          setChatSessions((prev) =>
-            prev.map((chat) =>
-              chat.id === currentChatId
-                ? {
-                    ...chat,
-                    messages: [...chat.messages, modeMessage],
-                    lastMessage: new Date(),
-                  }
-                : chat
-            )
-          );
-        }
-      } catch (error) {
-        console.error('Error updating mode:', error);
-      }
-    }
-  }, [updateState, currentChatId, setChatSessions]);
-
+  const currentChatId = currentSession?.id || '';
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-
-  const createNewChat = useCallback(async function createNewChat() {
+  const loadSessions = useCallback(async () => {
     if (!user?.id) return;
+    try {
+      console.log('[useChatSessions] Loading sessions for user:', user.id);
+      const sessions = await chatService.getChatSessions(user.id);
+      setSessions(sessions);
+      console.log('[useChatSessions] Sessions loaded successfully:', sessions.length);
+      
+      // セッション一覧が更新されたことをログ出力
+      console.log('[useChatSessions] Updated sessions list:', sessions.map(s => ({ id: s.id, title: s.title })));
+    } catch (error) {
+      console.error('[useChatSessions] Failed to load sessions:', error);
+      // エラーが発生しても空配列を設定して続行
+      setSessions([]);
+    }
+  }, [user?.id]);
 
-    await withErrorHandling(async () => {
-      const sessionId = await chatService.createChatSession(user.id);
-      if (!sessionId) return;
+  const updateCurrentSession = useCallback((updater: (prev: ChatSession | null) => ChatSession | null) => {
+    setCurrentSession(updater);
+  }, []);
 
-      const initialMessage = transformMessage({
-        id: crypto.randomUUID(),
-        text: `こんにちは！私はAIアシスタントです。
-初めてご利用いただきありがとうございます。医療に関する一般的な質問に回答させていただきます。
-
-ご不明な点がございましたら、お気軽にお尋ねください。`,
-        sender: 'ai',
-        timestamp: new Date(),
-        type: 'normal'
-      });
-
-      await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender);
-
-      const newChat: ChatSession = {
-        id: sessionId,
-        title: '新しいチャット',
-        messages: [initialMessage],
-        lastMessage: new Date(),
-        user_id: user.id,
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          currentMode: currentMode,
-          messageCount: 1,
-          hasUnread: false,
-          isTemporary: false
-        }
-      };
-
-      setState(prevState => ({
-        ...prevState,
-        chatSessions: [newChat, ...prevState.chatSessions],
-        currentChatId: sessionId
-      }));
-    }, (error) => {
-      console.error('Error creating new chat:', error);
-    });
-  }, [user?.id, currentMode, setChatSessions, setCurrentChatId]);
-
-  const loadChatSessions = useCallback(async function loadChatSessions() {
+  // 現在のセッションの読み込み
+  const loadCurrentSession = useCallback(async (sessionId?: string) => {
+    console.log('[useChatSessions] loadCurrentSession called', { sessionId, userId: user?.id });
+    
     if (!user?.id) {
+      console.log('[useChatSessions] No user ID, setting loading to false');
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
     try {
-      const sessions = await chatService.getChatSessions(user.id);
-      setChatSessions(sessions);
+      if (sessionId) {
+        console.log('[useChatSessions] Loading session:', sessionId);
+        const session = await chatService.getChatSession(sessionId);
+        if (session) {
+          setCurrentSession(session);
+          console.log('[useChatSessions] Session loaded successfully');
+          setIsLoading(false);
+          return;
+        }
+      }
       
-      // セッションが空の場合のみ新規チャットを作成
-      if (sessions.length === 0) {
-        await createNewChat();
-      } else {
-        setCurrentChatId(sessions[0].id);
+      // セッションIDが指定されていないか、取得に失敗した場合は新規作成
+      console.log('[useChatSessions] Creating new chat session');
+      
+      // 新規チャット作成のロジックを直接実行
+      try {
+        const sessionId = await chatService.createChatSession(user.id);
+        if (!sessionId) {
+          console.error('[useChatSessions] Failed to create session ID');
+          setIsLoading(false);
+          return;
+        }
+
+        const initialMessage = transformMessage({
+          id: crypto.randomUUID(),
+          text: `こんにちは！私はAIアシスタントです。
+医療に関する一般的な質問に回答させていただきます。
+
+ご不明な点がございましたら、お気軽にお尋ねください。`,
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'normal'
+        });
+
+        console.log('[useChatSessions] Initial message created:', { sender: initialMessage.sender, text: initialMessage.text.substring(0, 50) });
+
+        await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender);
+
+        const newChat: ChatSession = {
+          id: sessionId,
+          title: '新しいチャット',
+          messages: [initialMessage],
+          lastMessage: new Date(),
+          user_id: user.id,
+          metadata: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            currentMode: currentMode,
+            messageCount: 1,
+            hasUnread: false,
+            isTemporary: false
+          }
+        };
+
+        setCurrentSession(newChat);
+        console.log('[useChatSessions] New chat session created successfully');
+        setIsLoading(false);
+      } catch (newChatError) {
+        console.error('[useChatSessions] Error creating new chat:', newChatError);
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Error loading chat sessions:', error);
-    } finally {
+      console.error('[useChatSessions] Error loading current session:', error);
       setIsLoading(false);
     }
-  }, [user?.id, createNewChat]);
+  }, [user?.id, currentMode]);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadChatSessions();
+  // 新しいチャットセッションの作成
+  const createNewChat = useCallback(async () => {
+    if (!user?.id) return null;
+
+    // 重複実行を防ぐためのフラグ
+    if (isLoading) {
+      console.log('[useChatSessions] Already loading, skipping createNewChat');
+      return null;
     }
-  }, [user?.id]);
 
+    try {
+      console.log('[useChatSessions] Creating new chat session...');
+      setIsLoading(true);
+      
+      const sessionId = await chatService.createChatSession(user.id);
+      if (!sessionId) {
+        console.error('[useChatSessions] Failed to create session ID');
+        setIsLoading(false);
+        return null;
+      }
 
-  const selectChat = useCallback(async function selectChat(id: string) {
-    setCurrentChatId(id);
-    
-    const session = chatSessions.find(chat => chat.id === id);
-    if (!session?.messages?.length) {
       const initialMessage = transformMessage({
         id: crypto.randomUUID(),
         text: `こんにちは！私はAIアシスタントです。
@@ -176,273 +156,252 @@ export const useChatSessions = ({
         type: 'normal'
       });
 
-      setChatSessions((prev) =>
-        prev.map((chat) =>
-          chat.id === id
-            ? {
-                ...chat,
-                messages: [initialMessage],
-                lastMessage: new Date(),
-              }
-            : chat
-        )
-      );
+      console.log('[useChatSessions] Initial message created (createNewChat):', { sender: initialMessage.sender, text: initialMessage.text.substring(0, 50) });
 
-      await chatService.saveMessage(id, initialMessage.text, initialMessage.sender);
-      return;
+      await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender);
+
+      // セッション一覧を更新
+      await loadSessions();
+      
+      // 新しく作成したセッションを現在のセッションとして設定
+      const session = await chatService.getChatSession(sessionId);
+      if (session) {
+        setCurrentSession(session);
+        console.log('[useChatSessions] New chat session created and loaded successfully');
+        setIsLoading(false);
+        return session;
+      }
+      setIsLoading(false);
+      return null;
+    } catch (error) {
+      console.error('[useChatSessions] Error creating new chat:', error);
+      setIsLoading(false);
+      return null;
     }
-    
-    const switchMessage = transformMessage({
-      id: crypto.randomUUID(),
-      text: 'チャットを切り替えました',
-      sender: 'ai',
-      timestamp: new Date(),
-      type: 'mode_change'
+  }, [user?.id, currentMode, isLoading, loadSessions]);
+
+  // チャットセッションの選択
+  const selectChat = useCallback(async (id: string) => {
+    try {
+      console.log('[useChatSessions] Selecting chat:', id);
+      setIsLoading(true);
+      await loadCurrentSession(id);
+    } catch (error) {
+      console.error('[useChatSessions] Error selecting chat:', error);
+      setIsLoading(false);
+    }
+  }, [loadCurrentSession]);
+
+  // チャットセッションの削除
+  const deleteChat = useCallback(async (chatId: string) => {
+    try {
+      console.log('[useChatSessions] Deleting chat:', chatId);
+      await chatService.deleteChatSession(chatId);
+      // セッション一覧を更新
+      await loadSessions();
+      if (currentChatId === chatId) {
+        console.log('[useChatSessions] Deleted current chat, creating new one...');
+        await createNewChat();
+      }
+    } catch (error) {
+      console.error('[useChatSessions] Error deleting chat:', error);
+    }
+  }, [currentChatId, createNewChat, loadSessions]);
+
+  // 全チャットセッションの一括削除
+  const deleteAllChats = useCallback(async () => {
+    try {
+      // 確認ダイアログ
+      const confirmed = window.confirm(
+        `全${sessions.length}件のチャット履歴を削除しますか？\nこの操作は取り消せません。`
+      );
+      
+      if (!confirmed) {
+        console.log('[useChatSessions] Delete all chats cancelled by user');
+        return;
+      }
+      
+      console.log('[useChatSessions] Deleting all chats');
+      
+      // 現在のセッションIDを保存
+      const currentSessionId = currentChatId;
+      
+      // 全セッションを削除
+      const deletePromises = sessions.map(session => 
+        chatService.deleteChatSession(session.id)
+      );
+      
+      await Promise.all(deletePromises);
+      console.log('[useChatSessions] All chats deleted successfully');
+      
+      // セッション一覧をクリア
+      setSessions([]);
+      setCurrentSession(null);
+      
+      // 新しいチャットを作成
+      await createNewChat();
+      
+    } catch (error) {
+      console.error('[useChatSessions] Error deleting all chats:', error);
+    }
+  }, [sessions, currentChatId, createNewChat]);
+
+  // メッセージ送信
+  const sendMessage = useCallback(async (inputText: string, audioFile?: File, imageFile?: File) => {
+    if ((!inputText.trim() && !audioFile && !imageFile) || !currentChatId) return;
+
+    // デバッグログを追加
+    console.log('[useChatSessions] sendMessage called with:', {
+      inputText: inputText?.substring(0, 100),
+      hasAudioFile: !!audioFile,
+      hasImageFile: !!imageFile,
+      audioFileName: audioFile?.name,
+      imageFileName: imageFile?.name,
+      imageFileSize: imageFile?.size,
+      imageFileType: imageFile?.type,
+      currentMode
     });
 
     try {
-      setChatSessions((prev) =>
-        prev.map((chat) =>
-          chat.id === id
-            ? {
-                ...chat,
-                messages: [...chat.messages, switchMessage],
-                lastMessage: new Date(),
-              }
-            : chat
-        )
-      );
-
-      await chatService.saveMessage(id, switchMessage.text, switchMessage.sender);
-    } catch (error) {
-      console.error('Error switching chat:', error);
-    }
-  }, [setChatSessions, setCurrentChatId]);
-
-  const deleteChat = useCallback(async (chatId: string) => {
-    await withErrorHandling(async () => {
-      await chatService.deleteChatSession(chatId);
-      setChatSessions(prev => prev.filter(chat => chat.id !== chatId));
-      if (currentChatId === chatId) {
-        const remainingSessions = chatSessions.filter(chat => chat.id !== chatId);
-        if (remainingSessions.length > 0) {
-          setCurrentChatId(remainingSessions[0].id);
-        } else {
-          setCurrentChatId('');
-        }
+      let messageText = inputText.trim();
+      
+      if (audioFile) {
+        messageText += !messageText ? `音声ファイル「${audioFile.name}」を分析してください。` : `\n\n[音声ファイル: ${audioFile.name}]`;
       }
-    }, (error) => {
-      console.error('Error deleting chat:', error);
-    });
-  }, [chatSessions, currentChatId, setChatSessions, setCurrentChatId]);
-
-  // メッセージからタイトルを生成する関数
-  const generateTitle = (text: string): string => {
-    // メッセージから最初の文を抽出
-    const firstSentence = text.split(/[\n\.\?？]/).filter(s => s.trim())[0];
-    
-    // 文が長すぎる場合は省略
-    const maxLength = 20;
-    if (firstSentence.length <= maxLength) {
-      return firstSentence.trim();
-    }
-    return firstSentence.substring(0, maxLength).trim() + '...';
-  };
-
-  const sendMessage = useCallback(async function sendMessage(inputText: string, audioFile?: File) {
-    if ((!inputText.trim() && !audioFile) || !currentChatId) return;
-    const currentSession = chatSessions.find(session => session.id === currentChatId);
-    
-    // 一時的なチャットの場合、最初のメッセージ送信時に永続化
-    if (currentSession?.metadata?.isTemporary) {
-      const sessionId = await chatService.createChatSession(user?.id || '');
-      if (!sessionId) return;
-
-      // メッセージの永続化
-      await Promise.all([
-        ...currentSession.messages.map(msg =>
-          chatService.saveMessage(sessionId, msg.text, msg.sender)
-        )
-      ]);
-
-      // メッセージからタイトルを生成
-      const newTitle = generateTitle(inputText);
-
-      // チャットセッションの更新
-      setState(prevState => ({
-        ...prevState,
-        chatSessions: prevState.chatSessions.map(chat =>
-          chat.id === currentChatId
-            ? {
-                ...chat,
-                id: sessionId,
-                metadata: {
-                  ...chat.metadata,
-                  isTemporary: false
-                },
-                title: newTitle
-              }
-            : chat
-        ),
-        currentChatId: sessionId
-      }));
-    }
-    console.log('Sending message:', { inputText, hasAudioFile: !!audioFile, currentChatId });
-
-    await withErrorHandling(async () => {
-      const messageText = audioFile
-        ? !inputText.trim()
-          ? `音声ファイル「${audioFile.name}」を分析してください。`
-          : `${inputText.trim()}\n\n[音声ファイル: ${audioFile.name}]`
-        : inputText.trim();
-
-      const isSystemMessage = messageText.includes('モードを') || 
-                            messageText.includes('チャットを切り替えました');
+      
+      if (imageFile) {
+        messageText += !messageText ? `画像ファイル「${imageFile.name}」を分析してください。` : `\n\n[画像ファイル: ${imageFile.name}]`;
+      }
 
       const userMessage = transformMessage({
         id: crypto.randomUUID(),
         text: messageText,
-        sender: isSystemMessage ? 'ai' : 'user',
+        sender: 'user',
         timestamp: new Date(),
-        type: isSystemMessage ? 'mode_change' : 'normal'
+        type: 'normal'
       });
 
-      // まずローカル状態を更新
-      setState(prevState => ({
-        ...prevState,
-        chatSessions: prevState.chatSessions.map(chat =>
-          chat.id === currentChatId
-            ? {
-                ...chat,
-                messages: [...chat.messages, userMessage],
-                lastMessage: new Date(),
-              }
-            : chat
-        ),
-      }));
+      console.log('[useChatSessions] User message created:', { sender: userMessage.sender, text: userMessage.text.substring(0, 50) });
 
-      // データベースに保存
-      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender);
-      
-      if (isSystemMessage) {
-        return;
+      if (currentSession) {
+        updateCurrentSession(prev => prev ? {
+          ...prev,
+          messages: [...prev.messages, userMessage],
+          lastMessage: new Date(),
+        } : null);
       }
 
-
+      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender);
+      await loadCurrentSession(currentChatId);
       setIsTyping(true);
 
       try {
-        // ネットワークチェック
-        const mobileInfo = getMobileInfo();
-        if (mobileInfo.isMobile && !mobileInfo.online) {
-          throw new Error('オフライン状態です。インターネット接続を確認してください。');
+        console.log('[useChatSessions] Calling sendMessageToDify with imageFile:', {
+          hasImageFile: !!imageFile,
+          imageFileName: imageFile?.name,
+          imageFileSize: imageFile?.size,
+          imageFileType: imageFile?.type
+        });
+        
+        // 画像ファイルの詳細ログ
+        if (imageFile) {
+          console.log('[useChatSessions] Image file being sent to Dify:', {
+            name: imageFile.name,
+            size: imageFile.size,
+            type: imageFile.type,
+            lastModified: imageFile.lastModified
+          });
         }
         
-        if (mobileInfo.isMobile) {
-          const networkOk = await checkNetworkStatus();
-          if (!networkOk) {
-            throw new Error('ネットワーク接続が不安定です。');
-          }
-        }
-
-        let difyRes;
-        try {
-          difyRes = await sendMessageToDify(
-            messageText,
-            currentMode,
-            audioFile
-          );
-          if (!difyRes || !difyRes.answer) {
-            throw new Error('応答の取得に失敗しました。もう一度お試しください。');
-          }
-        } catch (difyError) {
-          console.error('Dify API error:', difyError);
-          if (difyError instanceof Error) {
-            // カスタムエラーメッセージがある場合はそれを使用
-            if (difyError.message.includes('応答時間が長すぎます') || 
-                difyError.message.includes('タイムアウト')) {
-              throw difyError;
-            }
-            // その他のエラーの場合は一般的なメッセージ
-            throw new Error('応答の取得に失敗しました。ネットワーク接続を確認してください。');
-          }
-          throw difyError;
+        const difyRes = await sendMessageToDify(messageText, currentMode, audioFile, imageFile);
+        
+        if (!difyRes || !difyRes.answer) {
+          throw new Error('応答の取得に失敗しました');
         }
 
         const aiMessage = transformMessage({
           id: crypto.randomUUID(),
-          text: difyRes.answer ?? '（回答が空でした）',
+          text: difyRes.answer,
           sender: 'ai',
           timestamp: new Date(),
           type: 'normal'
         });
 
-        // まずローカル状態を更新
-        setState(prevState => ({
-          ...prevState,
-          chatSessions: prevState.chatSessions.map(chat =>
-            chat.id === currentChatId
-              ? {
-                  ...chat,
-                  messages: [...chat.messages, aiMessage],
-                  lastMessage: new Date(),
-                }
-              : chat
-          ),
-        }));
+        console.log('[useChatSessions] AI message created:', { sender: aiMessage.sender, text: aiMessage.text.substring(0, 50) });
+
+        if (currentSession) {
+          updateCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, aiMessage],
+            lastMessage: new Date(),
+          } : null);
+        }
 
         await chatService.saveMessage(currentChatId, aiMessage.text, aiMessage.sender);
-
-      } catch (err) {
-        const errorCategory = categorizeError(err);
-        const errorText = getMobileErrorMessage(errorCategory);
-        
+        await loadCurrentSession(currentChatId);
+      } catch (error) {
+        console.error('Error getting AI response:', error);
         const errorMessage = transformMessage({
           id: crypto.randomUUID(),
-          text: err instanceof Error && err.message.length < 200
-            ? `${errorText} (詳細: ${err.message})`
-            : errorText,
+          text: error instanceof Error ? error.message : '応答の取得に失敗しました',
           sender: 'ai',
           timestamp: new Date(),
-          type: 'normal'
+          type: 'error'
         });
 
-        setState(prevState => ({
-          ...prevState,
-          chatSessions: prevState.chatSessions.map(chat =>
-            chat.id === currentChatId
-              ? {
-                  ...chat,
-                  messages: [...chat.messages, errorMessage],
-                  lastMessage: new Date(),
-                }
-              : chat
-          ),
-        }));
+        console.log('[useChatSessions] Error message created:', { sender: errorMessage.sender, text: errorMessage.text });
+
+        if (currentSession) {
+          updateCurrentSession(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, errorMessage],
+            lastMessage: new Date(),
+          } : null);
+        }
 
         await chatService.saveMessage(currentChatId, errorMessage.text, errorMessage.sender);
       } finally {
         setIsTyping(false);
       }
-    }, (error) => {
+    } catch (error) {
       console.error('Error sending message:', error);
-    });
-  }, [currentChatId, currentMode, setChatSessions]);
+      setIsTyping(false);
+    }
+  }, [currentChatId, currentMode, currentSession, updateCurrentSession, loadCurrentSession, chatService]);
 
-  const currentChat = chatSessions?.find?.((c) => c.id === currentChatId) || null;
-  const messages = currentChat?.messages ?? [];
+  // セッション自動リロード
+  useEffect(() => {
+    if (user?.id) {
+      console.log('[useChatSessions] User authenticated, loading sessions...');
+      loadSessions();
+      if (!currentSession) {
+        console.log('[useChatSessions] No current session, creating new one...');
+        loadCurrentSession();
+      }
+    } else {
+      console.log('[useChatSessions] No user ID, clearing sessions');
+      setSessions([]);
+      setCurrentSession(null);
+      setIsLoading(false);
+    }
+  }, [user?.id, loadCurrentSession, loadSessions]);
+
+  const messages = currentSession?.messages ?? [];
 
   return {
-    chatSessions,
-    currentChatId,
+    currentSession,
+    sessions,
     messages,
     isTyping,
     isLoading,
     selectChat,
     createNewChat,
     deleteChat,
+    deleteAllChats,
     sendMessage,
     currentMode,
     setCurrentMode,
+    loadCurrentSession: () => loadCurrentSession(),
+    loadSessions,
   };
 };

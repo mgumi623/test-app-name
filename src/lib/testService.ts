@@ -1,6 +1,17 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+/**
+ * このファイルはSupabaseデータベースの診断用サービスを提供します。
+ * Row Level Security (RLS)を回避して、システムレベルの診断を実行します。
+ * 
+ * 診断項目：
+ * - Supabase基本接続テスト
+ * - テーブル存在確認
+ * - SELECT文の実行テスト
+ * - RPC機能の動作確認
+ * 
+ * 注意：このサービスは開発環境での診断専用です
+ */
 
-// テスト専用のサービス（RLSなしでテーブル存在確認）
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 export class TestService {
   private supabase = createClientComponentClient();
 

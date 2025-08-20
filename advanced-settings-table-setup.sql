@@ -1,4 +1,13 @@
--- Create advanced settings table
+/*
+このSQLファイルは詳細設定を管理するテーブルを作成します：
+- 週5シフト制の設定
+- 週の開始日設定
+- ベテランスタッフの調整設定
+
+セキュリティ設定：
+- 認証済みユーザーに対する読み取り/更新/挿入権限の設定
+- Row Level Security (RLS)による適切なアクセス制御
+*/
 CREATE TABLE advanced_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     weekly_five_shifts BOOLEAN DEFAULT true,

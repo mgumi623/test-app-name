@@ -12,6 +12,16 @@ interface MessageItemProps {
 }
 
 export default function MessageItem({ message, index, copiedMessageId, onCopyMessage }: MessageItemProps) {
+  // デバッグ情報
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[MessageItem] Rendering message:', { 
+      id: message.id, 
+      sender: message.sender, 
+      text: message.text.substring(0, 50),
+      type: message.type 
+    });
+  }
+
   if (message.type === 'mode_change') {
     return (
       <div className="animate-fade-in-up mb-6" style={{ animationDelay: `${index * 0.1}s` }}>

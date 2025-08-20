@@ -1,6 +1,14 @@
--- RIHA スケジュール管理システム用の管理者設定テーブル作成
+/*
+このSQLファイルはRIHAスケジュール管理システムの管理者設定を管理するテーブルを作成します：
+- 管理者パスワードの保存と管理
+- Row Level Security (RLS)の設定による認証ユーザーのみのアクセス制御
+- 更新日時の自動記録機能
+- デフォルトパスワード('0000')の初期設定
 
--- 管理者設定テーブルの作成
+テーブル仕様：
+- シングルレコード制約（id = 1のみ許可）
+- パスワード、作成日時、更新日時を管理
+*/
 CREATE TABLE IF NOT EXISTS admin_settings (
     id bigint PRIMARY KEY DEFAULT 1,
     password varchar(100) NOT NULL,

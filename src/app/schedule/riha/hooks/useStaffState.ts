@@ -5,6 +5,7 @@ import { Staff, POSITION_PRIORITY, PROFESSION_PRIORITY } from '../data/staff';
 import { generateStaffData } from '../data/generateStaffData';
 import { supabase } from '../../../../lib/supabase';
 import { useTeams } from '../contexts/TeamsContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SortField = 'name' | 'team' | 'position' | 'profession' | 'years';
 type SortDirection = 'asc' | 'desc';
@@ -16,12 +17,15 @@ interface StaffStateError {
 
 export function useStaffState() {
   const { teams } = useTeams();
+  const { user } = useAuth();
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<StaffStateError | null>(null);
 
   // データベースからスタッフリストを取得
   const fetchStaff = useCallback(async () => {
+    if (!user || teams.length === 0) return;
+    console.log('Fetching staff with user and teams:', { userId: user?.id, teamsCount: teams.length });
     try {
       setLoading(true);
       setError(null);
@@ -29,11 +33,15 @@ export function useStaffState() {
       console.log('Fetching staff data...');
       const { data: existingData, error: checkError } = await supabase
         .from('staff')
-        .select('count')
-        .single();
+        .select('*')
+        .order('created_at');
+
+      if (checkError) {
+        throw new Error(`データ確認エラー: ${checkError.message}`);
+      }
 
       // データが存在しない場合、初期データを生成してDBに挿入
-      if (!existingData || existingData.count === 0) {
+      if (!existingData || existingData.length === 0) {
         console.log('No data found, generating initial data...');
         const initialData = generateStaffData(teams);
         const { data: insertedData, error: insertError } = await supabase
@@ -48,18 +56,8 @@ export function useStaffState() {
         console.log('Initial data inserted:', insertedData);
         setStaffList(insertedData || []);
       } else {
-        // 既存データを取得
-        const { data, error: fetchError } = await supabase
-          .from('staff')
-          .select('*')
-          .order('created_at');
-
-        if (fetchError) {
-          throw new Error(`データ取得エラー: ${fetchError.message}`);
-        }
-
-        console.log('Fetched existing data:', data);
-        setStaffList(data || []);
+        console.log('Using existing data:', existingData);
+        setStaffList(existingData);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'スタッフデータの取得に失敗しました';
@@ -257,6 +255,11 @@ export function useStaffState() {
 
   // 初期データ読み込み
   useEffect(() => {
+    if (!user || teams.length === 0) {
+      console.log('Missing requirements:', { user: !!user, teamsCount: teams.length });
+      return;
+    }
+
     fetchStaff();
   }, [fetchStaff]);
 

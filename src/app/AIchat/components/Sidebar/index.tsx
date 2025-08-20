@@ -4,22 +4,28 @@ import ChatList from './ChatList';
 
 interface SidebarProps {
   isOpen: boolean;
-  chatSessions: ChatSession[];
+  currentSession: ChatSession | null;
+  sessions: ChatSession[];
   currentChatId: string;
   onSelectChat: (id: string) => void;
   onCreateNewChat: () => void;
   onDeleteChat: (chatId: string) => void;
+  onDeleteAllChats: () => void;
   onCloseSidebar: () => void;
+  isLoading?: boolean;
 }
 
 export default function Sidebar({
   isOpen,
-  chatSessions,
+  currentSession,
+  sessions,
   currentChatId,
   onSelectChat,
   onCreateNewChat,
   onDeleteChat,
+  onDeleteAllChats,
   onCloseSidebar,
+  isLoading = false,
 }: SidebarProps) {
   return (
     <>
@@ -28,17 +34,22 @@ export default function Sidebar({
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col h-full max-h-screen">
           <SidebarHeader 
             onCreateNewChat={onCreateNewChat}
             onCloseSidebar={onCloseSidebar}
+            isLoading={isLoading}
           />
-          <ChatList
-            chatSessions={chatSessions}
-            currentChatId={currentChatId}
-            onSelectChat={onSelectChat}
-            onDeleteChat={onDeleteChat}
-          />
+          <div className="flex-1 min-h-0">
+            <ChatList
+              currentSession={currentSession}
+              sessions={sessions}
+              currentChatId={currentChatId}
+              onSelectChat={onSelectChat}
+              onDeleteChat={onDeleteChat}
+              onDeleteAllChats={onDeleteAllChats}
+            />
+          </div>
         </div>
       </div>
 

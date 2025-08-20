@@ -1,4 +1,20 @@
--- チャットセッションテーブルの作成
+/*
+このSQLファイルはAIチャットシステム用のデータベーステーブルを作成します：
+
+テーブル構成：
+1. chat_sessions: チャットセッション管理
+   - ユーザーごとのチャット履歴
+   - セッションタイトル管理
+
+2. chat_messages: チャットメッセージ管理
+   - セッションごとのメッセージ履歴
+   - ユーザー/AI の発言を区別して保存
+
+機能：
+- インデックスによる検索最適化
+- RLSによる認証ユーザーのみのアクセス制御
+- 更新日時の自動記録
+*/
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,

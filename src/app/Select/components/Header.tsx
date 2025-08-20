@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 
 export default function Header() {
-  const { userData } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <header className="mb-8 sm:mb-12">
@@ -23,7 +23,7 @@ export default function Header() {
           </AvatarFallback>
         </Avatar>
         <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-          こんにちわ {userData?.name || 'ユーザー'}さん
+          こんにちは {profile?.name || 'ユーザー'}さん
         </h1>
         <p className="mt-2 text-sm sm:text-base text-muted-foreground">
           利用する機能を選択してください。

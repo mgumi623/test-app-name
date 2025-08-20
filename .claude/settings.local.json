@@ -20,7 +20,8 @@
       "Bash(npm run:*)",
       "Bash(curl:*)",
       "Bash(find:*)",
-      "Bash(tsc --noEmit)"
+      "Bash(tsc --noEmit)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

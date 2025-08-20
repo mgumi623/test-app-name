@@ -273,31 +273,31 @@ export default function ShiftTable({
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="overflow-x-auto max-w-[100vw] pb-4">
+        <Table className="w-[800px] min-w-full lg:w-full text-xs sm:text-sm md:text-base">
           <TableHeader>
             <TableRow>
-              <TableHead className="bg-gray-100 w-40 left-0 z-20 sticky text-center">スタッフ名</TableHead>
+              <TableHead className="bg-gray-100 w-28 sm:w-32 md:w-40 left-0 z-20 sticky text-center">スタッフ名</TableHead>
               {days.map(day => {
                 const dayStatus = getDayStatus(day);
                 const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
                 return (
                   <TableHead 
                     key={day}
-                    className={`text-center min-w-[64px] transition-colors 
+                    className={`text-center w-12 sm:w-16 md:w-20 transition-colors 
                       ${isWeekend(dateObj) ? 'bg-slate-50' : ''} 
                       ${hoveredCell?.date === day ? 'bg-blue-50 text-blue-900' : ''}
                       ${getDay(dateObj) === 6 ? 'border-r-[1px] border-gray-400' : ''} ${
                       !dayStatus.isValid ? 'bg-red-50' : ''
                     }`}
                   >
-                    <div className="text-sm">{day}日</div>
-                    <div className={`text-xs ${
+                    <div className="flex flex-col items-center justify-center gap-0.5">
+                      <div className="text-xs sm:text-sm whitespace-nowrap">{day}日</div>
+                      <div className={`text-[8px] sm:text-[10px] ${
                       format(dateObj, 'E', { locale: ja }) === '土' ? 'text-blue-500' :
                       format(dateObj, 'E', { locale: ja }) === '日' ? 'text-red-500' : 
                       'text-gray-500'
-                    }`}>
-                      {format(dateObj, 'E', { locale: ja })}
+                    }`}>{format(dateObj, 'E', { locale: ja })}</div>
                     </div>
                   </TableHead>
                 );
@@ -310,11 +310,11 @@ export default function ShiftTable({
                 key={staff.id} 
                 className={`even:bg-gray-100 ${hoveredCell?.staffId === staff.id ? 'bg-gray-50' : ''}`}
               >
-                <TableCell className={`font-medium left-0 z-10 sticky whitespace-nowrap py-3 text-sm transition-colors flex flex-col items-center justify-center ${hoveredCell?.staffId === staff.id ? 'bg-blue-50 text-blue-900' : 'bg-inherit'}`}>
-                  <div>
-                    {staff.name}
+                <TableCell className={`font-medium left-0 z-10 sticky whitespace-nowrap py-1 sm:py-2 md:py-3 text-xs sm:text-sm transition-colors ${hoveredCell?.staffId === staff.id ? 'bg-blue-50 text-blue-900' : 'bg-inherit'}`}>
+                  <div className="flex items-center gap-1">
+                    <span>{staff.name}</span>
                     {staff.position !== '一般' && (
-                      <div className="text-xs text-gray-500 mt-0.5 text-center w-full">{staff.position}</div>
+                      <span className="text-xs text-gray-500">({staff.position})</span>
                     )}
                   </div>
                 </TableCell>
@@ -327,7 +327,7 @@ export default function ShiftTable({
                       key={day} 
                       onMouseEnter={() => setHoveredCell({ staffId: staff.id, date: day })}
                       onMouseLeave={() => setHoveredCell(null)}
-                      className={`py-6 px-6 text-center transition-all duration-300 hover:bg-blue-100/80 hover:shadow-inner hover:scale-105 cursor-pointer 
+                      className={`h-8 sm:h-10 md:h-12 px-1 sm:px-2 md:px-4 text-center transition-all duration-300 hover:bg-blue-100/80 hover:shadow-inner hover:scale-105 cursor-pointer whitespace-nowrap 
                         ${hoveredCell?.date === day ? 'bg-gray-100' : ''} 
                         ${getDay(dateObj) === 6 ? 'border-r-[1px] border-gray-400' : ''}
                         ${entry?.manuallyEdited ? 'bg-yellow-50' : ''} ${
@@ -342,11 +342,9 @@ export default function ShiftTable({
                         }
                       }}
                     >
-                      <div>
-                        <span>
-                          {entry?.leaveType ?? (entry?.isWorking ? '' : '')}
-                        </span>
-                      </div>
+                      <span className="inline-block">
+                      {entry?.leaveType ?? (entry?.isWorking ? '' : '')}
+                    </span>
                     </TableCell>
                   );
                 })}

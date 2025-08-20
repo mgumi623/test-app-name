@@ -75,16 +75,9 @@ export const MessageItem = memo(function MessageItem({
   copiedMessageId,
   onCopyMessage
 }: MessageItemProps) {
-  // システムメッセージの場合
+  // システムメッセージの場合は表示しない
   if (message.type === 'mode_change') {
-    return (
-      <div
-        className="animate-fade-in-up mb-6"
-        style={{ animationDelay: `${Math.min(index * 0.1, 1)}s` }}
-      >
-        <SystemMessage text={message.text} />
-      </div>
-    );
+    return null;
   }
 
   // 通常のメッセージ

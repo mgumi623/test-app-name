@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 interface SidebarHeaderProps {
   onCreateNewChat: () => void;
   onCloseSidebar: () => void;
+  isLoading?: boolean;
 }
 
-export default function SidebarHeader({ onCreateNewChat, onCloseSidebar }: SidebarHeaderProps) {
+export default function SidebarHeader({ onCreateNewChat, onCloseSidebar, isLoading = false }: SidebarHeaderProps) {
   return (
     <div className="flex items-center justify-between p-4 border-b border-[#cce3d9] bg-[#e8f2ed]">
       <h2 className="text-lg font-semibold text-gray-900">チャット履歴</h2>
@@ -15,11 +16,14 @@ export default function SidebarHeader({ onCreateNewChat, onCloseSidebar }: Sideb
           variant="outline"
           size="sm"
           onClick={onCreateNewChat}
-          className="bg-white hover:bg-[#2d513f] hover:text-white transition-all flex items-center gap-2 font-medium shadow-sm border-[#cce3d9]"
+          disabled={isLoading}
+          className="bg-white hover:bg-[#2d513f] hover:text-white transition-all flex items-center gap-2 font-medium shadow-sm border-[#cce3d9] disabled:opacity-50 disabled:cursor-not-allowed"
           title="新規チャットを開始"
         >
           <Plus className="w-5 h-5" />
-          <span className="text-sm">新規チャット</span>
+          <span className="text-sm">
+            {isLoading ? '作成中...' : '新規チャット'}
+          </span>
         </Button>
       </div>
     </div>

@@ -1,4 +1,16 @@
--- Create password settings table
+/*
+このSQLファイルはチーム別パスワード設定を管理するテーブルを作成します：
+
+テーブル仕様：
+- チームごとの固有パスワード管理
+- パスワードの有効/無効状態管理
+- チームIDによるユニーク制約
+
+セキュリティ設定：
+- 認証済みユーザーに対するCRUD操作の許可
+- Row Level Security (RLS)による適切なアクセス制御
+- 更新日時の自動記録
+*/
 CREATE TABLE password_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,

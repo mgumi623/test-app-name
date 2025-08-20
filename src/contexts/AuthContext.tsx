@@ -1,184 +1,245 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/auth-helpers-nextjs';
-import { supabase } from '../lib/supabase';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-
-interface AuthContextType {
-  user: User | null;
-  userData: UserData | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signOut: () => Promise<void>;
-}
-
-interface UserData {
-  id: string;
-  email: string;
-  name?: string;
-  role?: string;
-  permission?: string;
-  job?: string;
-  raw_user_meta_data?: Record<string, unknown>;
-}
+import { supabase } from '@/lib/supabase';
+import { AuthContextType, UserProfile } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+const debugLog = (message: string, data?: any) => {
+  // デバッグログを常に有効にして問題を特定
+  console.log(`[Auth] ${message}`, data || '');
 };
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  // Supabase client is imported at the top
+
+  // プロファイル情報を取得（リトライ機能付き）
+  async function fetchProfile(userId: string, retryCount = 0) {
+    try {
+      debugLog(`Fetching profile for user (attempt ${retryCount + 1})`, userId);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        
+        // 初回エラーの場合は少し待ってからリトライ（最大2回）
+        if (retryCount < 2) {
+          debugLog(`Retrying profile fetch in 1 second...`);
+          setTimeout(() => {
+            fetchProfile(userId, retryCount + 1);
+          }, 1000);
+          return;
+        }
+        
+        // プロファイル取得エラーでもユーザーは有効なので、プロファイルをnullに設定
+        setProfile(null);
+        setIsLoading(false); // 重要: ローディング状態を終了
+        return;
+      }
+
+      if (data) {
+        debugLog('Profile fetched successfully', data);
+        setProfile(data);
+      } else {
+        debugLog('No profile found for user');
+        setProfile(null);
+      }
+      
+      // 成功時も必ずローディング状態を終了
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      
+      // 初回エラーの場合は少し待ってからリトライ（最大2回）
+      if (retryCount < 2) {
+        debugLog(`Retrying profile fetch in 1 second...`);
+        setTimeout(() => {
+          fetchProfile(userId, retryCount + 1);
+        }, 1000);
+        return;
+      }
+      
+      // エラーが発生した場合もプロファイルをnullに設定
+      setProfile(null);
+      setIsLoading(false); // 重要: ローディング状態を終了
+    }
+  }
+
+  // 初期化時とセッション変更時のユーザー状態の設定
+  const handleSession = async (session: any) => {
+    try {
+      if (session?.user) {
+        debugLog('Setting user from session', session.user);
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else {
+        debugLog('No session found, clearing user and profile');
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false); // セッションがない場合は即座にローディング終了
+      }
+    } catch (error) {
+      console.error('Error in handleSession:', error);
+      setIsLoading(false); // エラー時もローディング終了
+    }
+  };
 
   useEffect(() => {
-    // 初期認証状態の確認
-    const getInitialSession = async () => {
+    debugLog('Initializing auth context');
+    
+    // 初期セッション取得
+    const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Session error:', error);
-          // セッションエラーの場合、ローカルストレージをクリア
-          if (error.message.includes('refresh') || error.message.includes('token')) {
+          console.error('Error getting session:', error);
+          // リフレッシュトークンエラーの場合は認証状態をクリア
+          if (error.message.includes('Refresh Token') || error.message.includes('Invalid')) {
+            debugLog('Refresh token error, clearing auth state');
             await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            setError(null);
+          } else {
+            setError(error.message);
           }
-          setLoading(false);
+          setIsLoading(false);
           return;
         }
-
-        if (session?.user) {
-          setUser(session.user);
-          setUserData({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name,
-            role: session.user.user_metadata?.role,
-            permission: session.user.user_metadata?.permission,
-            job: session.user.user_metadata?.job,
-            raw_user_meta_data: session.user.user_metadata,
-          });
-        }
+        
+        debugLog('Initial session check', session);
+        await handleSession(session);
       } catch (error) {
-        console.error('Failed to get initial session:', error);
-        await supabase.auth.signOut();
-      } finally {
-        setLoading(false);
+        console.error('Error in initializeAuth:', error);
+        setIsLoading(false);
       }
     };
 
-    getInitialSession();
+    initializeAuth();
 
     // 認証状態の変更を監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
-        
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed successfully');
-        }
-        
-        if (event === 'SIGNED_OUT') {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      debugLog('Auth state changed', { event, session });
+      
+      try {
+        // サインイン成功時の特別な処理
+        if (event === 'SIGNED_IN') {
+          debugLog('Sign in event detected, handling session');
+          await handleSession(session);
+          
+          // 現在のパスがログインページの場合、Next.jsのルーターを使用してリダイレクト
+          if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+            debugLog('Redirecting from login to Select page');
+            setTimeout(() => {
+              router.push('/Select');
+            }, 500);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          debugLog('Sign out event detected, clearing state');
           setUser(null);
-          setUserData(null);
-          setLoading(false);
-          return;
-        }
-
-        if (session?.user) {
-          setUser(session.user);
-          setUserData({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name,
-            role: session.user.user_metadata?.role,
-            permission: session.user.user_metadata?.permission,
-            job: session.user.user_metadata?.job,
-            raw_user_meta_data: session.user.user_metadata,
-          });
+          setProfile(null);
+          setError(null);
+          
+          // ログインページ以外にいる場合はログインページにリダイレクト
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            router.push('/login');
+          }
+        } else if (event === 'TOKEN_REFRESHED') {
+          debugLog('Token refreshed, updating session');
+          await handleSession(session);
         } else {
-          setUser(null);
-          setUserData(null);
+          await handleSession(session);
         }
-        setLoading(false);
+      } catch (error) {
+        console.error('Error in auth state change handler:', error);
+        setIsLoading(false);
       }
-    );
+    });
 
     return () => {
+      debugLog('Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, []); // supabaseはグローバルインスタンスのため依存配列から除外
+  }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+  // プロファイル更新用の関数
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      debugLog('Updating profile', updates);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('user_id', user.id);
 
-      if (error) {
-        return { error: error.message };
-      }
-
-      if (data.user) {
-        // ログイン成功時にユーザーデータを設定
-        setUser(data.user);
-        setUserData({
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name,
-          role: data.user.user_metadata?.role,
-          permission: data.user.user_metadata?.permission,
-          job: data.user.user_metadata?.job,
-          raw_user_meta_data: data.user.user_metadata,
-        });
-        
-        router.push('/Select');
-      }
-
-      return { error: null };
-    } catch {
-      return { error: 'ログインに失敗しました' };
+      if (error) throw error;
+      
+      // プロファイルを再取得
+      await fetchProfile(user.id);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
     }
   };
 
+  // ログアウト処理
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setUserData(null);
+      debugLog('Starting sign out process');
       
-      // ローカルストレージも完全にクリア
-      if (typeof window !== 'undefined') {
-        localStorage.clear();
-        sessionStorage.clear();
+      // 状態を即座にクリア
+      setUser(null);
+      setProfile(null);
+      setError(null);
+      
+      // Supabaseからサインアウト
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error during signOut:', error);
+        // エラーがあっても続行
       }
       
+      debugLog('Sign out completed, redirecting to login');
+      
+      // Next.jsのルーターを使用してリダイレクト
       router.push('/login');
     } catch (error) {
-      console.error('Sign out error:', error);
-      // エラーが発生してもログアウト状態にする
-      setUser(null);
-      setUserData(null);
+      console.error('Error in signOut:', error);
+      // エラーが発生してもリダイレクトを実行
       router.push('/login');
     }
+  };
+
+  // 認証エラー時のクリア処理
+  const clearAuthError = () => {
+    setError(null);
   };
 
   const value = {
     user,
-    userData,
-    loading,
-    signIn,
+    profile,
+    isLoading,
+    error,
     signOut,
+    updateProfile,
+    clearAuthError,
   };
 
   return (
@@ -186,4 +247,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

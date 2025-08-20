@@ -1,6 +1,34 @@
 import { ChatMessage } from '../types/chat';
 import { ID, Timestamp, AppError } from '../types/common';
 
+// 入力サニタイゼーション関数
+export const sanitizeInput = (input: string): string => {
+  if (typeof input !== 'string') return '';
+  
+  // 基本的なサニタイゼーション
+  return input
+    .trim()
+    .replace(/[<>]/g, '') // 基本的なHTMLタグを除去
+    .substring(0, 10000); // 最大長制限
+};
+
+export const validatePrompt = (prompt: string): { isValid: boolean; error?: string } => {
+  if (!prompt || typeof prompt !== 'string') {
+    return { isValid: false, error: 'プロンプトが無効です' };
+  }
+  
+  const sanitized = sanitizeInput(prompt);
+  if (sanitized.length === 0) {
+    return { isValid: false, error: 'プロンプトが空です' };
+  }
+  
+  if (sanitized.length > 10000) {
+    return { isValid: false, error: 'プロンプトが長すぎます（最大10000文字）' };
+  }
+  
+  return { isValid: true };
+};
+
 // 型ガード
 export const isValidId = (value: unknown): value is ID => {
   return typeof value === 'string' && value.length > 0;
@@ -19,7 +47,7 @@ export const isValidMessage = (value: unknown): value is ChatMessage => {
     isValidTimestamp(msg.timestamp) &&
     typeof msg.text === 'string' &&
     ['user', 'ai', 'system'].includes(msg.sender) &&
-    (!msg.type || ['normal', 'mode_change', 'system'].includes(msg.type))
+    (!msg.type || ['normal', 'mode_change', 'system', 'error'].includes(msg.type))
   );
 };
 
@@ -35,9 +63,7 @@ export class ChatError extends Error implements AppError {
   }
 
   static fromError(error: unknown): ChatError {
-    if (error instanceof ChatError) return error;
-    
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new ChatError(message, 'UNKNOWN_ERROR', error);
   }
 }
@@ -53,12 +79,13 @@ export const transformMessage = (raw: unknown): ChatMessage => {
 // エラー処理ラッパー
 export const withErrorHandling = async <T>(
   operation: () => Promise<T>,
-  errorHandler: (error: ChatError) => void
-): Promise<T | undefined> => {
+  errorHandler?: (error: unknown) => void
+): Promise<T | null> => {
   try {
     return await operation();
   } catch (error) {
-    errorHandler(ChatError.fromError(error));
-    return undefined;
+    console.error('Operation failed:', error);
+    errorHandler?.(error);
+    return null;
   }
 };

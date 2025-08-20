@@ -1,3 +1,24 @@
+/**
+ * このファイルはAIチャットのヘッダーコンポーネントを提供します。
+ *
+ * 主な機能：
+ * - モード切替（通常、脳血管、感染マニュアル等）
+ * - サイドバーの表示/非表示制御
+ * - モード説明のツールチップ表示
+ *
+ * UI要素：
+ * - クローバーロゴ（アニメーション付き）
+ * - モード選択ドロップダウン
+ * - ハンバーガーメニュー
+ *
+ * 特徴：
+ * - レスポンシブデザイン
+ * - アニメーション効果
+ * - クリックアウトサイドでの自動閉じ
+ */
+
+'use client';
+
 import { Menu, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -17,12 +38,17 @@ const modeDescriptions: Record<ModeType, string> = {
 interface HeaderProps {
   selectedMode?: ModeType;
   onModeChange?: (mode: ModeType) => void;
-  currentChatId: string;
-  onSendMessage: (text: string) => void;
+  currentChatId?: string;
+  onPostNotice?: (text: string) => void; // optional にして安全化
   onToggleSidebar: () => void;
 }
 
-export default function Header({ selectedMode = '通常', onModeChange, onSendMessage, onToggleSidebar }: HeaderProps) {
+export default function Header({
+  selectedMode = '通常',
+  onModeChange,
+  onPostNotice = () => {}, // デフォルト no-op
+  onToggleSidebar,
+}: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shouldRotate, setShouldRotate] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -36,12 +62,10 @@ export default function Header({ selectedMode = '通常', onModeChange, onSendMe
         setIsDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
   return (
     <div className="z-10 w-full backdrop-blur-sm bg-white/60 border-b border-gray-200 p-3 sm:p-4">
       <div className="flex items-center space-x-3 animate-fade-in">
@@ -54,38 +78,30 @@ export default function Header({ selectedMode = '通常', onModeChange, onSendMe
         >
           <Menu className="w-5 h-5" />
         </Button>
+
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-1.5 transition-colors"
           >
             <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg">
-              <style>{`
-                @keyframes single-spin {
-                  from { transform: rotate(0deg); }
-                  to { transform: rotate(360deg); }
-                }
-                .rotate-once {
-                  animation: single-spin 0.8s ease-in-out;
-                }
-              `}</style>
               <div className={shouldRotate ? 'rotate-once' : ''}>
-                <Image 
-                  src="/image/clover.svg" 
-                  alt="Clover Logo" 
-                  width={20} 
-                  height={20} 
+                <Image
+                  src="/image/clover.svg"
+                  alt="Clover Logo"
+                  width={20}
+                  height={20}
                   onAnimationEnd={() => setShouldRotate(false)}
                 />
               </div>
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">
-                AI Assistant
-              </h1>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900">AI Assistant</h1>
               <p className="text-xs sm:text-sm text-gray-600">{selectedMode}モード</p>
             </div>
-            <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`w-4 h-4 text-gray-600 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+            />
           </button>
 
           {isDropdownOpen && (
@@ -102,8 +118,8 @@ export default function Header({ selectedMode = '通常', onModeChange, onSendMe
                           }
                           setIsDropdownOpen(false);
                           setShouldRotate(true);
-                          const message = `モードを${mode}に変更しました。\n${modeDescriptions[mode]}`;
-                          onSendMessage(message);
+                          const notice = `モードを${mode}に変更しました。\n${modeDescriptions[mode]}`;
+                          onPostNotice?.(notice);  // オプショナルチェーンで安全
                           onModeChange?.(mode);
                         }}
                         className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${

@@ -12,7 +12,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
-
   useEffect(() => {
     // 初回マウント後に表示開始
     setMounted(true);

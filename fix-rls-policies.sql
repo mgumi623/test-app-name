@@ -1,5 +1,14 @@
--- RLSポリシーの修正（分析システム用）
--- Supabaseダッシュボード → SQL Editor で実行してください
+/*
+このSQLファイルは分析システムのRow Level Security (RLS)ポリシーを更新します：
+
+更新内容：
+1. 既存の制限的なポリシーを削除
+2. より柔軟な新しいポリシーを作成（全操作を許可）
+3. 新ポリシーの動作確認
+4. テストデータ挿入による検証
+
+実行環境：Supabaseダッシュボード → SQL Editor
+*/
 
 -- 既存のポリシーを削除
 DROP POLICY IF EXISTS "Admin can view all analytics sessions" ON analytics_sessions;

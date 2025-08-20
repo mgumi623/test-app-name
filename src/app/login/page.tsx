@@ -1,23 +1,40 @@
 'use client';
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { Eye, EyeOff, Lock, User, Bot } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Eye, EyeOff, Lock, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import ScrollingBackground from '@/components/ScrollingBackground';
 
 export default function LoginPage() {
-  /* ----------------------------- Auth context ---------------------------- */
-  const { signIn } = useAuth();
+  const router = useRouter();
 
   /* ------------------------------ React states ------------------------------ */
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ login_id: '', password: '' });
+  const [formData, setFormData] = useState({ staff_id: '', password: '' });
+  const { profile, isLoading: authLoading, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [authTimeout, setAuthTimeout] = useState(false);
 
   const [showResetForm, setShowResetForm] = useState(false);
   const [resetMessage] = useState('');
+
+  // 認証タイムアウトの処理
+  React.useEffect(() => {
+    if (authLoading) {
+      const timeout = setTimeout(() => {
+        setAuthTimeout(true);
+      }, 10000); // 10秒でタイムアウト
+
+      return () => clearTimeout(timeout);
+    } else {
+      setAuthTimeout(false);
+    }
+  }, [authLoading]);
 
   /* ------------------------------- Handlers -------------------------------- */
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) =>
@@ -29,19 +46,45 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     
-    if (!formData.login_id || !formData.password) {
+    if (!formData.staff_id || !formData.password) {
       setError('IDとパスワードを入力してください。');
+      return;
+    }
+
+    // 入力検証の強化
+    const sanitizedStaffId = formData.staff_id.trim();
+    const sanitizedPassword = formData.password;
+    
+    // スタッフIDの形式検証（数字のみ許可）
+    if (!/^\d+$/.test(sanitizedStaffId)) {
+      setError('ユーザーIDは数字のみで入力してください。');
+      return;
+    }
+    
+    // パスワードの最小長検証
+    if (sanitizedPassword.length < 1) {
+      setError('パスワードを入力してください。');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const email = `${formData.login_id}@example.com`;
-      const result = await signIn(email, formData.password);
+      const email = `${sanitizedStaffId}@example.com`;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: sanitizedPassword
+      });
 
-      if (result.error) {
-        setError(result.error);
+      if (error) {
+        setError('IDまたはパスワードが間違っています');
+        return;
+      }
+
+      if (data?.user) {
+        // ログイン成功後、プロファイルデータの取得を待機
+        console.log('Login successful, user:', data.user);
+        // AuthContextがサインインイベントを検知して自動的にリダイレクトします
       }
     } catch {
       setError('ログインに失敗しました。再度お試しください。');
@@ -53,8 +96,47 @@ export default function LoginPage() {
   /* ---------------------------- Password Reset ----------------------------- */
 
   /* --------------------------------- JSX ---------------------------------- */
+  
+  // 認証ローディング中の表示（タイムアウト機能付き）
+  if (authLoading) {
+    return (
+      <>
+        <ScrollingBackground />
+        <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+          <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p className="text-gray-600 mb-2">認証状態を確認中...</p>
+            <p className="text-xs text-gray-500">しばらくお待ちください</p>
+            
+            {authTimeout && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-800 mb-2">認証の確認に時間がかかっています</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  ページを再読み込み
+                </button>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 text-sm text-blue-600 hover:text-blue-800 underline"
+            >
+              ページを再読み込み
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
+      {/* スクロール背景 */}
+      <ScrollingBackground />
+      
       {/* AIChatスタイルのグローバルCSS */}
       <style>{`
         @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
@@ -65,120 +147,176 @@ export default function LoginPage() {
         ::-webkit-scrollbar-track { background: #f1f5f9 }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8 }
+        
+        /* 入力欄のフォーカス色を控えめに適用 */
+        input:focus {
+          border-color: #16A34A !important;
+          box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.15) !important;
+          outline: none !important;
+        }
       `}</style>
 
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md animate-fade-in-up">
-          {/* ヘッダー部分 - AIChatスタイル */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-200 mb-4">
-              <Bot className="w-8 h-8 text-gray-600" />
-            </div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">ログイン</h1>
-            <p className="text-gray-600">病院管理システムにサインインしてください</p>
-          </div>
+                           <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+                                   {/* 背景オーバーレイ - クリックでトップページに戻る */}
+                  <div 
+                    className="absolute inset-0 bg-black/20 backdrop-blur-sm cursor-pointer"
+                    onClick={() => router.push('/')}
+                  ></div>
+                 
+                                                                       <div className="w-full max-w-2xl animate-fade-in-up relative z-20">
+                    {/* ログインフォーム */}
+                    <Card 
+                      className="border-0 shadow-2xl bg-white aspect-video"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                                             <div className="flex h-full">
+                                                   {/* 左側：ロゴエリア（3割） */}
+                          <div className="w-3/10 bg-white p-8 flex items-center justify-center">
+                            <img
+                              src="/image/clover.svg"
+                              alt="Clover Logo"
+                              className="w-32 h-32 text-green-600"
+                            />
+                          </div>
+                          
+                                                   {/* 右側：入力フォーム（7割） */}
+                           <div className="w-7/10 p-6 flex flex-col justify-center">
+                                                     <div className="text-center mb-4">
+                             <CardTitle className="text-lg font-semibold text-gray-900 mb-1">ログイン</CardTitle>
+                           </div>
+                           
+                          <form onSubmit={handleSubmit} className="space-y-3">
+                            {/* エラーメッセージ */}
+                            {error && (
+                              <div className="p-2 bg-red-50 border border-red-200 rounded-md">
+                                <p className="text-xs text-red-700">{error}</p>
+                              </div>
+                            )}
+                            
+                                                                                                                   {/* ユーザーID */}
+                              <div className="space-y-2 text-left">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                                    <User className="h-3 w-3 text-gray-500" />
+                                    ユーザーID
+                                  </label>
+                                  <span className="text-xs text-gray-500">職員IDを入力してください</span>
+                                </div>
+                               <div className="relative">
+                                 <Input
+                                   type="text"
+                                   name="staff_id"
+                                   value={formData.staff_id}
+                                   onChange={handleInputChange}
+                                   className="h-10 pl-3 pr-3 border-2 border-gray-200 focus:border-green-600 focus:ring-1 focus:ring-green-600/10 transition-all duration-200 text-sm"
+                                   placeholder="例: 12345"
+                                   required
+                                 />
+                                 <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                                   <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
+                                 </div>
+                               </div>
+                             </div>
 
-          {/* ログインフォーム */}
-          <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-medium text-gray-900">アカウント情報を入力</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* エラーメッセージ */}
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                )}
-              {/* ユーザーID */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">ユーザーID</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="login_id"
-                    value={formData.login_id}
-                    onChange={handleInputChange}
-                    className="pl-10 h-12 border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-gray-300"
-                    placeholder="IDを入力してください"
-                    required
-                  />
-                </div>
-              </div>
+                                                                                                                   {/* パスワード */}
+                              <div className="space-y-2 text-left">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                                    <Lock className="h-3 w-3 text-gray-500" />
+                                    パスワード
+                                  </label>
+                                  <span className="text-xs text-gray-500">設定されたパスワードを入力してください</span>
+                                </div>
+                               <div className="relative">
+                                 <Input
+                                   type={showPassword ? 'text' : 'password'}
+                                   name="password"
+                                   value={formData.password}
+                                   onChange={handleInputChange}
+                                   className="h-10 pl-3 pr-10 border-2 border-gray-200 focus:border-green-600 focus:ring-1 focus:ring-green-600/10 transition-all duration-200 text-sm"
+                                   placeholder="パスワードを入力"
+                                   required
+                                 />
+                                 <Button
+                                   type="button"
+                                   variant="ghost"
+                                   size="icon"
+                                   onClick={() => setShowPassword(!showPassword)}
+                                   className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                 >
+                                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                 </Button>
+                               </div>
+                             </div>
 
-              {/* パスワード */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">パスワード</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="pl-10 pr-12 h-12 border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-gray-300"
-                    placeholder="パスワードを入力してください"
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
+                            {/* ユーザー情報表示 */}
+                            {profile && (
+                              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg animate-fade-in">
+                                <h3 className="text-green-800 font-medium mb-1 text-sm">ログイン成功</h3>
+                                <div className="text-xs text-green-700 space-y-0.5">
+                                  <p>氏名: {profile.name}</p>
+                                  <p>部署: {profile.department}</p>
+                                  <p>役割: {profile.role}</p>
+                                </div>
+                              </div>
+                            )}
 
-                {/* ログインボタン */}
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-12 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-base rounded-lg transition-colors"
-                >
-                  {isLoading ? '認証中...' : 'サインイン'}
-                </Button>
-              </form>
+                                                         {/* パスワードリセットリンク */}
+                             <div className="text-right mt-1">
+                               <Button
+                                 type="button"
+                                 variant="ghost"
+                                 onClick={() => setShowResetForm(!showResetForm)}
+                                 className="text-gray-600 hover:text-gray-900 text-xs font-medium p-0 h-auto"
+                               >
+                                 パスワードをお忘れですか？
+                               </Button>
+                             </div>
 
-              {/* パスワードリセットリンク */}
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setShowResetForm(!showResetForm)}
-                  className="text-gray-600 hover:text-gray-900 text-sm font-medium p-0 h-auto"
-                >
-                  パスワードをお忘れですか？
-                </Button>
-              </div>
+                             {/* ログインボタン */}
+                             <Button
+                               type="submit"
+                               disabled={isLoading}
+                               className="w-full h-10 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                             >
+                               {isLoading ? (
+                                 <div className="flex items-center gap-2">
+                                   <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                                   認証中...
+                                 </div>
+                               ) : (
+                                 <div className="flex items-center gap-2">
+                                   <LogIn className="h-4 w-4" />
+                                   ログイン
+                                 </div>
+                               )}
+                             </Button>
+                           </form>
 
-              {/* パスワードリセットメッセージ */}
-              {showResetForm && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg border animate-fade-in-up">
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">パスワードリセット</h3>
-                  <p className="text-sm text-gray-600 mb-3">
-                    パスワードを忘れた場合は、システム管理者にお問い合わせください。
-                  </p>
-                  {resetMessage && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                      <p className="text-sm text-blue-700">{resetMessage}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                                                     {/* パスワードリセットメッセージ */}
+                           {showResetForm && (
+                             <div className="mt-4 p-3 bg-gray-50 rounded-lg border animate-fade-in-up">
+                               <h3 className="text-xs font-medium text-gray-900 mb-2">パスワードリセット</h3>
+                               <p className="text-xs text-gray-600 mb-2">
+                                 パスワードを忘れた場合は、システム管理者にお問い合わせください。
+                               </p>
+                               {resetMessage && (
+                                 <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                   <p className="text-xs text-blue-700">{resetMessage}</p>
+                                 </div>
+                               )}
+                             </div>
+                           )}
 
-          {/* フッター */}
-          <div className="text-center mt-8">
-            <p className="text-xs text-gray-500">© 2025 Koreha Maenaka ga Tukutta Yo.</p>
-          </div>
-        </div>
-      </div>
+                           {/* フッター */}
+                           <div className="text-center mt-4">
+                             <p className="text-xs text-gray-500">© 2025 医療法人 生和会 SDX研究所</p>
+                           </div>
+                         </div>
+                      </div>
+                    </Card>
+                 </div>
+               </div>
     </>
   );
 }

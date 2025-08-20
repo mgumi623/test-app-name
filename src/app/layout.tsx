@@ -1,6 +1,17 @@
+/**
+ * このファイルはアプリケーションのルートレイアウトを定義します。
+ * 
+ * 主な機能：
+ * - グローバルスタイルの適用
+ * - HTMLドキュメントの基本構造設定
+ * - クライアントコンポーネントのラッピング
+ * - メタデータの設定（タイトル、説明）
+ */
+
 import type { Metadata } from "next";
+import { headers } from 'next/headers';
 import "./globals.css";
-import ClientLayout from "./ClientLayout";
+import Providers from "@/components/Providers";
 
 
 export const metadata: Metadata = {
@@ -15,8 +26,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.13.0/css/all.css" />
+      </head>
       <body className="relative antialiased">
-        <ClientLayout>{children}</ClientLayout>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

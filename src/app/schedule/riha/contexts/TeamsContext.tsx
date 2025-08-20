@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Team {
   id: string;
@@ -28,7 +29,10 @@ export function TeamsProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { user } = useAuth();
+
   const fetchTeams = useCallback(async () => {
+    if (!user) return;
     try {
       setLoading(true);
       const { data, error: supabaseError } = await supabase

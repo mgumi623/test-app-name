@@ -1,36 +1,494 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# S-BOT システム
 
-## Getting Started
+医療施設向け業務改善統合アプリケーション
 
-First, run the development server:
+## 概要
 
+S-BOTは、医療スタッフの業務効率化を目的とした統合アプリケーションです。定型業務の時間短縮化ツールとして、様々な医療施設で活用されています。
+
+### 特徴
+- **セキュアな認証システム**: Supabaseを使用した安全なログイン機能
+- **直感的なUI**: 医療スタッフが使いやすいインターフェース
+- **レスポンシブデザイン**: デスクトップ、タブレット、モバイルに対応
+- **美しい背景**: 医療施設の画像による動的な背景表示
+- **サイドバーナビゲーション**: 効率的なメニュー操作
+
+## 主な機能
+
+### 認証機能
+- セキュアなログインシステム
+- ユーザー認証状態の管理
+- セッション管理
+
+### ナビゲーション
+- **はじめに**
+  - S-BOTとは
+  - できること（業務別）
+- **運用**
+  - FAQ
+  - お問い合わせ
+  - リリースノート
+
+### 視覚的要素
+- 動的な横スクロール背景（9つの医療施設画像）
+- シームレスな無限ループアニメーション
+- ホバーエフェクトとインタラクティブ要素
+
+## 技術スタック
+
+### フロントエンド
+- **フレームワーク**: Next.js 14 (App Router)
+- **言語**: TypeScript
+- **スタイリング**: Tailwind CSS
+- **UI コンポーネント**: shadcn/ui
+- **アニメーション**: CSS Animations
+
+### バックエンド・認証
+- **認証**: Supabase Auth
+- **データベース**: Supabase PostgreSQL
+- **リアルタイム**: Supabase Realtime
+
+### 開発ツール
+- **パッケージマネージャー**: npm
+- **リンター**: ESLint
+- **フォーマッター**: Prettier
+- **バージョン管理**: Git
+
+## システム要件
+
+### 推奨環境
+- **OS**: Windows 10/11, macOS 10.15+, Ubuntu 20.04+
+- **ブラウザ**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **メモリ**: 4GB以上（推奨8GB）
+- **ネットワーク**: 安定したインターネット接続（推奨10Mbps以上）
+- **画面解像度**: 1920x1080以上（推奨）
+
+### 最小要件
+- **OS**: Windows 8.1, macOS 10.14+
+- **ブラウザ**: Chrome 80+, Firefox 75+
+- **メモリ**: 2GB
+- **ネットワーク**: 5Mbps以上
+- **画面解像度**: 1366x768以上
+
+### 開発環境要件
+- **Node.js**: 18.0.0以上
+- **npm**: 8.0.0以上 または yarn 1.22.0以上
+- **Git**: 2.30.0以上
+
+## セットアップ
+
+### インストール手順
+
+1. **リポジトリをクローン**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone [repository-url]
+cd test-app-name
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **依存関係をインストール**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **環境変数を設定**
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local`ファイルを編集して以下の設定を追加：
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Learn More
+4. **開発サーバーを起動**
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. **ブラウザでアクセス**
+```
+http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 本番環境デプロイ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+#### Vercelでのデプロイ
+```bash
+npm run build
+vercel --prod
+```
 
-## Deploy on Vercel
+#### その他のプラットフォーム
+- **Netlify**: `npm run build` → `dist`フォルダをデプロイ
+- **AWS S3**: `npm run build` → `out`フォルダをS3にアップロード
+- **自前サーバー**: `npm run build` → `dist`フォルダをWebサーバーに配置
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## プロジェクト構造
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+test-app-name/
+├── src/
+│   ├── app/                           # Next.js App Router
+│   │   ├── page.tsx                  # メインページ（ログイン画面）
+│   │   ├── login/                    # ログインページ
+│   │   ├── AIchat/                   # AIチャット機能
+│   │   ├── schedule/                 # スケジュール管理
+│   │   └── api/                      # API ルート
+│   ├── components/                   # React コンポーネント
+│   │   ├── ScrollingBackground.tsx   # メイン背景コンポーネント
+│   │   ├── ui/                       # shadcn/ui コンポーネント
+│   │   └── ProtectedRoute.tsx        # 認証保護コンポーネント
+│   ├── contexts/                     # React Context
+│   │   ├── AuthContext.tsx           # 認証状態管理
+│   │   └── SupabaseContext.tsx       # Supabase接続管理
+│   ├── hooks/                        # カスタムフック
+│   ├── lib/                          # ユーティリティ関数
+│   └── types/                        # TypeScript型定義
+├── public/
+│   ├── image/                        # 医療施設画像（9枚）
+│   └── logoimage/                    # S-BOTロゴ画像
+├── scripts/                          # ユーティリティスクリプト
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+## 使用方法
+
+### ログイン
+1. メインページの中央にある「ログイン」ボタンをクリック
+2. 認証情報を入力
+3. システムにログイン
+
+### ナビゲーション
+- **サイドバー**: 左側のメニューから各種機能にアクセス
+- **メニュー項目**:
+  - **はじめに**
+    - S-BOTとは: システムの概要説明
+    - できること（業務別）: 機能紹介
+  - **運用**
+    - FAQ: よくある質問
+    - お問い合わせ: サポート連絡先
+    - リリースノート: 更新履歴
+
+### 背景アニメーション
+- 2行の横スクロール背景（60秒で1周）
+- 1行目: 4枚の医療施設画像
+- 2行目: 5枚の医療施設画像
+- シームレスな無限ループ
+
+## 開発者向け情報
+
+### 開発コマンド
+```bash
+npm run dev      # 開発サーバー起動 (http://localhost:3000)
+npm run build    # プロダクションビルド
+npm run start    # プロダクションサーバー起動
+npm run lint     # ESLint実行
+npm run type-check # TypeScript型チェック
+```
+
+### 主要コンポーネント
+
+#### ScrollingBackground.tsx
+メイン背景とログイン機能を担当する中心的なコンポーネント
+- 横スクロール背景アニメーション
+- S-BOTロゴとタイトル表示
+- 中央配置のログインボタン
+- サイドバーナビゲーション
+
+#### AuthContext.tsx
+認証状態の管理を行うContext
+- ユーザー認証状態の管理
+- ログイン/ログアウト機能
+- プロフィール情報の取得
+
+#### UI コンポーネント (shadcn/ui)
+- Button: ログインボタンなど
+- Card: 情報表示用
+- Dialog: モーダル表示
+- Form: フォーム入力
+
+### スタイリング
+- **Tailwind CSS**: ユーティリティファーストのCSSフレームワーク
+- **カスタムCSS**: アニメーション用のスタイル
+- **レスポンシブデザイン**: モバイルファーストアプローチ
+
+### アニメーション
+- **横スクロール**: CSS `@keyframes`を使用
+- **ホバーエフェクト**: 画像のスケール変更
+- **トランジション**: スムーズな状態変化
+
+## セキュリティガイドライン
+
+### 医療データの取り扱い
+- **患者情報**: システム内で患者情報を入力・保存しないでください
+- **ログアウト**: 使用後は必ずログアウトしてください
+- **共有端末**: 共有端末での使用時は特に注意してください
+- **画面ロック**: 離席時は必ず画面をロックしてください
+
+### パスワードポリシー
+- **最小8文字**: 英数字と記号を含む
+- **定期変更**: 3ヶ月ごとの変更を推奨
+- **再利用禁止**: 過去に使用したパスワードは使用不可
+- **強度チェック**: パスワード強度チェッカーを使用
+
+### アクセス制御
+- **権限管理**: 必要最小限の権限のみ付与
+- **セッション管理**: 30分の無操作で自動ログアウト
+- **IP制限**: 必要に応じてアクセス元IPを制限
+- **監査ログ**: すべてのアクセスを記録
+
+### データ保護
+- **暗号化**: 通信とデータ保存時の暗号化
+- **バックアップ**: 定期的な暗号化バックアップ
+- **削除**: 不要データの確実な削除
+- **監査**: 定期的なセキュリティ監査
+
+## 医療施設での運用について
+
+### セキュリティ
+- **患者情報の取り扱い**: 患者情報の取り扱いには十分注意してください
+- **パスワード管理**: 定期的なパスワード変更を推奨します
+- **アクセスログ**: アクセスログの監視を行ってください
+- **セッション管理**: 長時間の無操作時は自動ログアウトされます
+
+### バックアップ
+- **データバックアップ**: 重要なデータは定期的にバックアップを取得してください
+- **システム復旧**: システム障害に備えた復旧手順を準備してください
+- **定期メンテナンス**: システムの定期メンテナンスを実施してください
+
+### サポート
+- **技術サポート**: 技術的な問題が発生した場合は、開発チームまでお問い合わせください
+- **緊急サポート**: 緊急時は専用のサポートラインをご利用ください
+- **トレーニング**: 新規ユーザー向けのトレーニングを提供しています
+
+## トラブルシューティング
+
+### よくある問題
+
+#### ログインできない
+1. **ブラウザのキャッシュをクリア**
+   ```bash
+   # Chrome: Ctrl+Shift+Delete
+   # Firefox: Ctrl+Shift+Delete
+   # Safari: Cmd+Option+E
+   ```
+
+2. **パスワードの確認**
+   - 大文字小文字を確認
+   - スペースが入っていないか確認
+   - パスワードリセットを試行
+
+3. **ネットワーク接続の確認**
+   - インターネット接続を確認
+   - ファイアウォール設定を確認
+   - VPN接続の場合は切断して試行
+
+#### 画像が表示されない
+1. **画像ファイルの存在確認**
+   - `public/image/`フォルダ内の画像ファイルを確認
+   - ファイル名とパスの正確性を確認
+
+2. **ブラウザの開発者ツールでエラー確認**
+   - F12キーで開発者ツールを開く
+   - Consoleタブでエラーメッセージを確認
+   - Networkタブで画像の読み込み状況を確認
+
+3. **ネットワーク接続を確認**
+   - 画像ファイルへのアクセス権限を確認
+   - CDNや外部リソースの接続状況を確認
+
+#### アニメーションが重い
+1. **ブラウザのハードウェアアクセラレーションを有効化**
+   - Chrome: `chrome://settings/` → システム → ハードウェアアクセラレーション
+   - Firefox: `about:config` → `layers.acceleration.force-enabled`
+
+2. **他のタブやアプリケーションを閉じる**
+   - メモリ使用量を削減
+   - CPU使用率を確認
+
+3. **ブラウザを最新版に更新**
+   - 最新のパフォーマンス最適化を適用
+   - セキュリティアップデートを適用
+
+#### サイドバーが表示されない
+1. **画面サイズの確認**
+   - 最小画面幅: 1024px
+   - レスポンシブ設定を確認
+
+2. **JavaScriptの有効化確認**
+   - ブラウザでJavaScriptが有効になっているか確認
+   - アドブロッカーやセキュリティソフトの設定を確認
+
+3. **ブラウザの互換性確認**
+   - 推奨ブラウザを使用しているか確認
+   - 古いブラウザの場合は更新を推奨
+
+### エラーメッセージの対処法
+
+#### "認証状態を確認中..."が表示され続ける
+- **原因**: 認証サーバーとの通信エラー
+- **対処法**: 
+  1. ページを再読み込み
+  2. ブラウザのキャッシュをクリア
+  3. ネットワーク接続を確認
+  4. 10秒後に自動的にタイムアウトメッセージが表示される
+
+#### "画像の読み込みに失敗しました"
+- **原因**: 画像ファイルの破損またはパスエラー
+- **対処法**:
+  1. 画像ファイルの存在確認
+  2. ファイルパスの正確性確認
+  3. ファイル権限の確認
+
+#### "セッションが期限切れです"
+- **原因**: 長時間の無操作による自動ログアウト
+- **対処法**:
+  1. 再度ログイン
+  2. セッション管理設定の確認
+
+### ログファイルの確認方法
+
+#### ブラウザの開発者ツール
+1. F12キーで開発者ツールを開く
+2. Consoleタブでエラーログを確認
+3. Networkタブで通信ログを確認
+
+#### サーバーログ（開発者向け）
+```bash
+# 開発サーバーのログ
+npm run dev
+
+# 本番環境のログ
+# ホスティングサービスの管理画面で確認
+```
+
+## 更新履歴
+
+### v1.0.0 (2024-12-XX)
+- **初回リリース**
+  - ログイン機能の実装
+  - サイドバーナビゲーション
+  - 動的背景アニメーション
+  - レスポンシブデザイン対応
+  - 医療施設向けUI/UX
+  - セキュリティ機能の実装
+  - トラブルシューティング機能
+
+### v1.1.0 (予定)
+- **セキュリティ強化**
+  - 多要素認証（MFA）の実装
+  - アクセスログの詳細化
+  - セッション管理の改善
+- **パフォーマンス改善**
+  - 画像最適化
+  - キャッシュ機能の強化
+  - 読み込み速度の向上
+
+## API仕様
+
+### 認証API
+
+#### ログイン
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+#### ログアウト
+```http
+POST /api/auth/logout
+Authorization: Bearer <token>
+```
+
+#### セッション確認
+```http
+GET /api/auth/session
+Authorization: Bearer <token>
+```
+
+### レスポンス形式
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user_id",
+      "email": "user@example.com",
+      "role": "staff"
+    },
+    "token": "jwt_token"
+  },
+  "message": "ログインに成功しました"
+}
+```
+
+### エラーレスポンス
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_ERROR",
+    "message": "認証に失敗しました"
+  }
+}
+```
+
+## データベーススキーマ
+
+### ユーザーテーブル
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(50) DEFAULT 'staff',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  last_login TIMESTAMP
+);
+```
+
+### セッションテーブル
+```sql
+CREATE TABLE sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  token VARCHAR(255) UNIQUE NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## ライセンス
+
+このプロジェクトは医療施設向けの専用ライセンスの下で提供されています。
+- 商用利用: 医療施設での利用に限定
+- 再配布: 禁止
+- 改変: 開発チームの許可が必要
+
+## お問い合わせ
+
+### 開発チーム
+- **メール**: [development@example.com]
+- **技術サポート**: [tech-support@example.com]
+
+### 医療施設向けサポート
+- **一般サポート**: [support@example.com]
+- **緊急時**: [emergency-phone: 0120-XXX-XXX]
+- **営業時間**: 平日 9:00-18:00 (JST)
+
+### フィードバック
+- **機能要望**: [feature-request@example.com]
+- **バグ報告**: [bug-report@example.com]
+
+---
+
+**S-BOT システム** - 医療スタッフの業務改善をサポートします。

@@ -197,6 +197,15 @@
   animation: smooth-spin 3s ease-in-out infinite;
 }
 
+@keyframes single-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.rotate-once {
+  animation: single-spin 0.8s ease-in-out;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

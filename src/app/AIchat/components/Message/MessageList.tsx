@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useEffect } from 'react';
+import { memo, useRef } from 'react';
 import { ChatMessage } from '../../types/chat';
 import { MessageItem } from './MessageItem';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,28 +18,14 @@ export const MessageList = memo(function MessageList({
   onCopyMessage
 }: MessageListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const scrollToBottomRef = useRef<HTMLDivElement>(null);
-
   // 仮想スクロールの設定
   const rowVirtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 100, // 仮のメッセージの高さ
-    overscan: 5, // 事前に読み込む追加の行数
+    estimateSize: () => 100,
+    overscan: 5
   });
 
-  // スクロール処理の最適化
-  const scrollToBottom = useCallback(() => {
-    if (!scrollToBottomRef.current) return;
-    const behavior = messages.length > 20 ? 'auto' : 'smooth';
-    scrollToBottomRef.current.scrollIntoView({ behavior });
-  }, [messages.length]);
-
-  // メッセージ更新時のスクロール
-  useEffect(() => {
-    const timeoutId = setTimeout(scrollToBottom, 100);
-    return () => clearTimeout(timeoutId);
-  }, [messages, scrollToBottom]);
 
   return (
     <ScrollArea className="flex-1 bg-gray-50 h-full">
@@ -87,7 +73,6 @@ export const MessageList = memo(function MessageList({
           </div>
         )}
 
-        <div ref={scrollToBottomRef} />
       </div>
     </ScrollArea>
   );

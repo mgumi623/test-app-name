@@ -1,194 +1,137 @@
-// lib/dify.ts
+/**
+ * Dify 通信ユーティリティ（画像対応版・安定）
+ */
 export type ModeType = '通常' | '脳血管' | '感染マニュアル' | '議事録作成' | '文献検索';
 
-// 再試行機能付きのfetch関数
-const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3): Promise<Response> => {
-  let lastError: Error | null = null;
-  
+type SendArgs = {
+  prompt: string;
+  mode: ModeType;
+  audioFile?: File;
+  imageFile?: File;
+  isMobile: boolean;
+};
+
+const API_ENDPOINT = '/api/dify-proxy';
+
+const logFormData = (fd: FormData) => {
+  try {
+    const entries: any[] = [];
+    for (const [k, v] of fd.entries()) {
+      if (v instanceof File) entries.push([k, `File(name=${v.name}, size=${v.size}, type=${v.type})`]);
+      else entries.push([k, String(v).slice(0, 200)]);
+    }
+    console.log('[sendMessageToDify] FormData entries:', entries);
+  } catch {}
+};
+
+const buildOptions = (args: SendArgs): RequestInit => {
+  const { prompt, mode, audioFile, imageFile, isMobile } = args;
+
+  const isMultipart = !!audioFile || !!imageFile;
+  if (isMultipart) {
+    const fd = new FormData();
+
+    // Dify推奨フィールド
+    fd.append('query', prompt ?? '');
+    fd.append('response_mode', 'blocking');
+    fd.append('user', isMobile ? 'mobile-user' : 'desktop-user');
+    fd.append('mode', mode); // 既存互換（プロキシで参照するなら）
+    
+    // inputsフィールド（Difyの仕様に合わせる）
+    const inputs = {
+      mode: mode,
+      // 必要に応じて他の入力フィールドを追加
+    };
+    fd.append('inputs', JSON.stringify(inputs));
+
+    // ★ 画像ファイルは `files` に直接追加（プロキシで処理）
+    if (imageFile) {
+      fd.append('files', imageFile);                       // プロキシで処理
+      if (imageFile.size === 0) throw new Error('画像ファイルが空です');
+    }
+    if (audioFile) {
+      fd.append('audioFile', audioFile);                   // 互換
+      fd.append('files', audioFile, audioFile.name);       // 将来音声を files で扱う場合に備える
+    }
+
+    console.log('[dify.ts] using multipart', { hasAudio: !!audioFile, hasImage: !!imageFile });
+    console.log('[dify.ts] Image file details:', imageFile ? {
+      name: imageFile.name,
+      size: imageFile.size,
+      type: imageFile.type,
+      lastModified: imageFile.lastModified
+    } : 'No image file');
+    logFormData(fd);
+
+    return {
+      method: 'POST',
+      headers: { ...(isMobile && { 'x-mobile-request': 'true' }) }, // Content-Type は付けない
+      body: fd,
+      cache: 'no-cache',
+    };
+  }
+
+  // テキストのみ
+  return {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(isMobile && { 'x-mobile-request': 'true' }),
+    },
+    body: JSON.stringify({ prompt, mode }),
+    cache: 'no-cache',
+  };
+};
+
+const fetchWithRetry = async (url: string, optionsFactory: () => RequestInit, maxRetries = 3) => {
+  let lastError: unknown = null;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Fetch attempt ${attempt}/${maxRetries}`);
-      const response = await fetch(url, options);
-      
-      if (!response.ok && attempt < maxRetries) {
-        console.warn(`Attempt ${attempt} failed with status ${response.status}, retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // 段階的遅延
+      const res = await fetch(url, optionsFactory());
+      if (!res.ok && attempt < maxRetries) {
+        console.warn(`Attempt ${attempt} failed: ${res.status} ${res.statusText}`);
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
         continue;
       }
-      
-      return response;
-    } catch (error) {
-      lastError = error as Error;
-      console.error(`Fetch attempt ${attempt} failed:`, error);
-      
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        continue;
-      }
-    }
-  }
-  
-  throw lastError || new Error('All fetch attempts failed');
-};
-
-export const sendMessageToDify = async (prompt: string, mode: ModeType = '通常', audioFile?: File) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('sendMessageToDify called:', { mode, promptLength: prompt.length });
-  }
-  
-  try {
-    // モバイル環境の検出
-    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // タイムアウト設定（文献検索モードは5分、他は従来通り）
-    let timeoutMs: number;
-    if (mode === '文献検索') {
-      timeoutMs = 300000; // 5分（300秒）
-    } else {
-      timeoutMs = isMobile ? 90000 : 30000; // モバイルは90秒、デスクトップは30秒
-    }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Network request starting:', { mode, timeoutMs });
-    }
-    
-    // リクエストボディの準備
-    let fetchOptions: RequestInit;
-    
-    if (audioFile) {
-      // 音声ファイルがある場合：FormData
-      const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('mode', mode);
-      formData.append('audioFile', audioFile);
-      
-      fetchOptions = {
-        method: 'POST',
-        headers: {
-          ...(isMobile && { 'X-Mobile-Request': 'true' })
-          // Content-Typeは自動設定される（multipart/form-data）
-        },
-        body: formData,
-        cache: 'no-cache',
-      };
-    } else {
-      // テキストのみの場合：JSON
-      fetchOptions = {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(isMobile && { 'X-Mobile-Request': 'true' })
-        },
-        body: JSON.stringify({ prompt, mode }),
-        cache: 'no-cache',
-      };
-    }
-    
-    try {
-      const controller = new AbortController();
-      let timeoutId: NodeJS.Timeout;
-
-      const wrappedFetch = async () => {
-        try {
-          fetchOptions.signal = controller.signal;
-          const response = await fetchWithRetry('/api/dify-proxy', fetchOptions, 3);
-          clearTimeout(timeoutId);
-          return response;
-        } catch (error) {
-          clearTimeout(timeoutId);
-          throw error;
-        }
-      };
-
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => {
-          controller.abort();
-          reject(new Error('応答時間が長すぎます。もう一度お試しください。'));
-        }, 60000); // 1分のタイムアウト
-      });
-
-      const res = await Promise.race([wrappedFetch(), timeoutPromise]) as Response;
-      return await handleResponse(res);
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          console.error('Request aborted:', error.message);
-          throw new Error('応答時間が長すぎます。もう一度お試しください。');
-        }
-        console.error('Network error:', {
-          message: error.message,
-          name: error.name,
-          stack: error.stack
-        });
-      } else {
-        console.error('Unknown error:', error);
-      }
-      throw error;
-    }
-  } catch (error) {
-    console.error('sendMessageToDify error:', {
-      error: error instanceof Error ? error.message : String(error),
-      mode,
-      promptLength: prompt.length,
-      errorName: error instanceof Error ? error.name : 'Unknown',
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    throw error;
-  }
-};
-
-// レスポンス処理を分離
-const handleResponse = async (res: Response) => {
-  try {
-    if (!res.ok) {
-      let errorText = '';
-      let errorData: { error?: string } | null = null;
-      
-      try {
-        errorText = await res.text();
-        // JSONとして解析を試行
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          // JSONでない場合はテキストとして扱う
-        }
-      } catch {
-        errorText = 'Failed to read error response';
-      }
-      
-      console.error('Dify proxy error details:', {
-        status: res.status,
-        statusText: res.statusText,
-        headers: Object.fromEntries(res.headers.entries()),
-        body: errorText.slice(0, 200),
-        errorData
-      });
-      
-      // APIキーエラーの場合は特別なメッセージ
-      if (errorData?.error?.includes('API Key not configured')) {
-        throw new Error('APIキーが設定されていません。管理者にお問い合わせください。');
-      }
-      
-      throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText.slice(0, 100)}`);
-    }
-
-    let data;
-    try {
-      data = await res.json();
+      return res;
     } catch (e) {
-      console.error('Failed to parse JSON response:', e);
-      throw new Error('Invalid JSON response from server');
+      lastError = e;
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+        continue;
+      }
     }
-    
-    console.log('Dify response received:', { 
-      hasAnswer: !!data.answer, 
-      answerLength: data.answer?.length || 0,
-      responseKeys: Object.keys(data)
-    });
-    
-    return data; // { answer: string }
-  } catch (error) {
-    console.error('handleResponse error:', error);
-    throw error;
+  }
+  throw lastError instanceof Error ? lastError : new Error('All fetch attempts failed');
+};
+
+export const sendMessageToDify = async (
+  prompt: string,
+  mode: ModeType = '通常',
+  audioFile?: File,
+  imageFile?: File
+) => {
+  const isMobile =
+    typeof window !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  const timeoutMs = mode === '文献検索' ? 300_000 : imageFile ? 120_000 : isMobile ? 90_000 : 30_000;
+  console.log('[sendMessageToDify] start', { mode, hasAudio: !!audioFile, hasImage: !!imageFile, timeoutMs, isMobile });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const optionsFactory = () => ({ ...buildOptions({ prompt, mode, audioFile, imageFile, isMobile }), signal: controller.signal });
+
+  try {
+    const res = await fetchWithRetry(API_ENDPOINT, optionsFactory, 3);
+    const ct = res.headers.get('content-type') || '';
+    const raw = await res.text();
+    console.log('[sendMessageToDify] response', res.status, ct, raw.slice(0, 300));
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText} - ${raw.slice(0, 200)}`);
+    return ct.includes('application/json') ? JSON.parse(raw) : { raw };
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
