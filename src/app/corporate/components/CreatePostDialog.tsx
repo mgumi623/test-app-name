@@ -24,7 +24,12 @@ interface CreatePostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: 'message' | 'vision';
-  onSubmit: (data: any) => void;
+  onSubmit: (data: {
+    title: string;
+    content: string;
+    type: string;
+    priority: string;
+  }) => void;
 }
 
 export function CreatePostDialog({

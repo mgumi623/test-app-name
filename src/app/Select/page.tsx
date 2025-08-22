@@ -11,7 +11,7 @@ import LayoutSwitcher, { LayoutType } from './components/LayoutSwitcher';
 import GridLayout, { SkeletonCard } from './components/GridLayout';
 import ListLayout from './components/ListLayout';
 import HospitalNews from './components/HospitalNews';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext'; // ← 先ほどの新API版を使用（me/isAdmin/currentHospitalId）
 import { AnimatePresence } from 'framer-motion';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import AnnouncementPopup from '@/components/AnnouncementPopup';
@@ -19,53 +19,49 @@ import { Announcement } from '@/types/announcement';
 
 export default function DepartmentSelection() {
   const router = useRouter();
-  const { user, profile, isLoading } = useAuth();
+  // 🆕 新Authコンテキストに適応
+  const { user: me, isLoading, profile } = useAuth();
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [currentLayout, setCurrentLayout] = useState<LayoutType>('grid');
-  const [sidebarOpen, setSidebarOpen] = useState(true); // デスクトップではデフォルトで開いている
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('すべて');
-  
+
   // アナウンス関連の状態
-  const { announcements, getPopupAnnouncements, incrementPopupDisplayCount, loading: announcementsLoading } = useAnnouncements();
+  const {
+    announcements,
+    getPopupAnnouncements,
+    incrementPopupDisplayCount,
+    loading: announcementsLoading,
+  } = useAnnouncements();
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [popupAnnouncements, setPopupAnnouncements] = useState<Announcement[]>([]);
   const [announcementPopupChecked, setAnnouncementPopupChecked] = useState(false);
 
-  // 権限に基づいてオプションをフィルタリング
+  // 🆕 権限に基づいてオプションをフィルタリング（roles.code ベース）
   const filteredOptions = useMemo(() => {
-    // ローディング中またはプロファイルが未取得の場合は全オプションを表示
-    if (isLoading || !profile) {
-      return OPTIONS;
-    }
-    
-    // roleを使用して権限チェック
-    if (profile?.role === '管理者' || profile?.role === '研究員' || profile?.position === '管理職') {
-      return OPTIONS;
-    }
-    
-    // それ以外の場合は管理部門のオプションを除外
-    return OPTIONS.filter(option => option.department !== '管理');
-  }, [profile, isLoading]);
+    if (isLoading || !me) return OPTIONS;
+    const isAdmin = profile?.role === 'admin';
+    return isAdmin ? OPTIONS : OPTIONS.filter((option) => option.department !== '管理');
+  }, [me, isLoading, profile]);
 
   // カテゴリフィルタリング
   const categoryFilteredOptions = useMemo(() => {
-    if (selectedCategory === 'すべて') {
-      return filteredOptions;
-    }
-    return filteredOptions.filter(option => option.department === selectedCategory);
+    if (selectedCategory === 'すべて') return filteredOptions;
+    return filteredOptions.filter((option) => option.department === selectedCategory);
   }, [filteredOptions, selectedCategory]);
 
   // カテゴリ一覧とカウント
   const categories = useMemo(() => {
-    const deps = [...new Set(filteredOptions.map(option => option.department))];
+    const deps = [...new Set(filteredOptions.map((option) => option.department))];
     return ['すべて', ...deps];
   }, [filteredOptions]);
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { 'すべて': filteredOptions.length };
-    filteredOptions.forEach(option => {
+    const counts: Record<string, number> = { すべて: filteredOptions.length };
+    filteredOptions.forEach((option) => {
       counts[option.department] = (counts[option.department] || 0) + 1;
     });
     return counts;
@@ -76,6 +72,15 @@ export default function DepartmentSelection() {
     [selectedId, categoryFilteredOptions]
   );
 
+  // 🆕 初期カテゴリをスタッフの部署に寄せる（存在すれば）
+  useEffect(() => {
+    if (!isLoading && me && selectedCategory === 'すべて') {
+      const dept = profile?.department;
+      if (dept && categories.includes(dept)) setSelectedCategory(dept);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, me, categories]);
+
   // キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -84,7 +89,6 @@ export default function DepartmentSelection() {
         setSearchPaletteOpen(true);
       }
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -111,38 +115,26 @@ export default function DepartmentSelection() {
     setAnnouncementPopupChecked(false);
   }, []);
 
-  // アナウンスポップアップ表示のチェック
+  // 🆕 アナウンスポップアップ表示のチェック（user_metadata 依存を廃止）
   useEffect(() => {
-    console.log('Popup check conditions:', {
-      user: !!user,
-      announcementPopupChecked,
-      announcementsLoading,
-      announcementsLength: announcements.length
-    });
+    // 参照部門：me.profile.staffInfo.department.name（なければ空文字で全体向けを拾う想定）
+    const userDepartment = me?.profile.staffInfo?.department?.name ?? '';
 
-    if (user && !announcementPopupChecked && !announcementsLoading && announcements.length > 0) {
+    if (me && !announcementPopupChecked && !announcementsLoading && announcements.length > 0) {
       try {
-        const userDepartment = user.user_metadata?.department as string;
-        console.log('User department:', userDepartment);
-        console.log('Available announcements:', announcements.length);
-        
         const popupTargetAnnouncements = getPopupAnnouncements(userDepartment);
-        console.log('Popup target announcements:', popupTargetAnnouncements.length);
-        
+
         if (popupTargetAnnouncements.length > 0) {
-          // localStorage から閉じた アナウンスをチェック
+          // localStorage から閉じたアナウンスをチェック
           const closedAnnouncementsJson = localStorage.getItem('closedAnnouncements');
           const closedAnnouncements = closedAnnouncementsJson ? JSON.parse(closedAnnouncementsJson) : [];
-          console.log('Closed announcements:', closedAnnouncements);
-          
+
           // 閉じていないアナウンスのみフィルタ
           const unviewedAnnouncements = popupTargetAnnouncements.filter(
-            announcement => !closedAnnouncements.includes(announcement.id)
+            (announcement) => !closedAnnouncements.includes(announcement.id)
           );
-          console.log('Unviewed announcements:', unviewedAnnouncements.length);
-          
+
           if (unviewedAnnouncements.length > 0) {
-            console.log('Setting popup announcements:', unviewedAnnouncements);
             setPopupAnnouncements(unviewedAnnouncements);
             setShowAnnouncementPopup(true);
           }
@@ -153,7 +145,7 @@ export default function DepartmentSelection() {
         setAnnouncementPopupChecked(true);
       }
     }
-  }, [user, announcementPopupChecked, announcementsLoading, announcements.length, getPopupAnnouncements]);
+  }, [me, announcementPopupChecked, announcementsLoading, announcements.length, getPopupAnnouncements]);
 
   const handleNavigate = (opt: Option) => {
     if (isPending) return; // 二重押下防止
@@ -169,23 +161,21 @@ export default function DepartmentSelection() {
       try {
         const closedAnnouncementsJson = localStorage.getItem('closedAnnouncements');
         const closedAnnouncements = closedAnnouncementsJson ? JSON.parse(closedAnnouncementsJson) : [];
-        
-        // 現在のポップアップのアナウンスIDを追加
-        const newClosedAnnouncements = [...closedAnnouncements, ...popupAnnouncements.map(announcement => announcement.id)];
+
+        // 現在のポップアップのアナウンスIDを追加（重複排除）
+        const newClosedAnnouncements = [...closedAnnouncements, ...popupAnnouncements.map((a) => a.id)];
         const uniqueClosedAnnouncements = [...new Set(newClosedAnnouncements)];
-        
         localStorage.setItem('closedAnnouncements', JSON.stringify(uniqueClosedAnnouncements));
-        
+
         // 表示回数をカウントアップ
-        popupAnnouncements.forEach(announcement => {
+        popupAnnouncements.forEach((announcement) => {
           incrementPopupDisplayCount(announcement.id);
         });
-        
       } catch (error) {
         console.error('Error saving closed announcements:', error);
       }
     }
-    
+
     setShowAnnouncementPopup(false);
     setPopupAnnouncements([]);
   };
@@ -206,22 +196,22 @@ export default function DepartmentSelection() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-950 flex">
       {/* サイドバー */}
-      <Sidebar 
-        isOpen={sidebarOpen} 
+      <Sidebar
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onSidebarToggle={handleSidebarToggle}
       />
-      
+
       {/* メインコンテンツ */}
       <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-72' : 'lg:ml-0'}`}>
         {/* ヘッダー */}
-        <Header 
-          onMenuClick={() => setSidebarOpen(true)} 
+        <Header
+          onMenuClick={() => setSidebarOpen(true)}
           onSearchClick={() => setSearchPaletteOpen(true)}
           sidebarOpen={sidebarOpen}
           onSidebarToggle={handleSidebarToggle}
         />
-        
+
         {/* メインコンテンツエリア */}
         <main className="p-4 lg:p-6">
           <div className="max-w-6xl mx-auto">
@@ -256,13 +246,10 @@ export default function DepartmentSelection() {
                 {/* 表示形式選択 */}
                 <div className="w-full">
                   <h3 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">表示形式</h3>
-                  <LayoutSwitcher 
-                    currentLayout={currentLayout} 
-                    onLayoutChange={setCurrentLayout} 
-                  />
+                  <LayoutSwitcher currentLayout={currentLayout} onLayoutChange={setCurrentLayout} />
                 </div>
               </div>
-              
+
               {/* ローディング中のスケルトン表示 */}
               {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
@@ -278,7 +265,7 @@ export default function DepartmentSelection() {
                       onNavigate={handleNavigate}
                     />
                   )}
-                  
+
                   {currentLayout === 'list' && (
                     <ListLayout
                       options={categoryFilteredOptions}

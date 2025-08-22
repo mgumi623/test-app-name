@@ -117,7 +117,7 @@ export default function ImageUpload({
       />
       
       <div className="flex flex-col items-center space-y-2">
-        <Image className="w-8 h-8 text-gray-400" />
+        <Image className="w-8 h-8 text-gray-400" alt="" />
         <div className="text-sm">
           <span className="text-gray-600 font-medium">クリックして画像を選択</span>
           <br />

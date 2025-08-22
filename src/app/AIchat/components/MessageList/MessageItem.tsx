@@ -1,4 +1,4 @@
-import { Bot, User, Copy, Check } from 'lucide-react';
+import { User, Copy, Check } from 'lucide-react';
 import { ChatMessage } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';

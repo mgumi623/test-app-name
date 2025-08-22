@@ -87,12 +87,12 @@ const getImageConfig = (id: string) => {
       };
     case 'announcements':
       return {
-        src: '/Icon/Noimage.svg',
+        src: '/Icon/報告.svg',
         alt: 'Announcements illustration'
       };
     case 'corporate':
       return {
-        src: '/Icon/Noimage.svg',
+        src: '/Icon/掲示板.svg',
         alt: 'Corporate illustration'
       };
     case 'admin-analytics':

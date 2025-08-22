@@ -105,7 +105,12 @@ export default function CorporatePage() {
     setShowPostDialog(true);
   };
 
-  const handleSubmitPost = (data: any) => {
+  const handleSubmitPost = (data: {
+    title?: string;
+    content: string;
+    type?: 'short' | 'long';
+    priority?: 'high' | 'medium' | 'low';
+  }) => {
     if (postType === 'vision') {
       const newVision: Vision = {
         id: visions.length + 1,

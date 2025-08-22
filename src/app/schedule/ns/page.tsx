@@ -1,5 +1,10 @@
 'use client';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import Header from '../riha/components/Header';
+import NSidebar from './components/NSidebar';
 import {
   ChevronLeft,
   ChevronRight,
@@ -149,8 +154,11 @@ const seedStaff: Staff[] = [
 // ----------------------------- 本体 -----------------------------
 
 const ShiftManagementTool = () => {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useLocalStorage<Date>('ui.month', new Date());
   const [isAdmin, setIsAdmin] = useLocalStorage<boolean>('ui.isAdmin', false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [currentView, setCurrentView] = useState<'shift' | 'staff' | 'settings'>('shift');
 
   // スタッフと割当（ローカル保存）
   const [staff, setStaff] = useLocalStorage<Staff[]>('data.staff.v1', seedStaff);
@@ -172,6 +180,17 @@ const ShiftManagementTool = () => {
 
   const getDayOfWeek = (day: number) => youbi[new Date(new Date(currentDate).getFullYear(), new Date(currentDate).getMonth(), day).getDay()];
   const dateKey = useCallback((day: number) => getDateKey(new Date(currentDate), day), [currentDate]);
+
+  // 認証チェック（一時的に無効化）
+  // if (!user) {
+  //   return (
+  //     <div className="flex min-h-screen items-center justify-center bg-gray-50">
+  //       <div className="text-center">
+  //         <p className="text-gray-600">ログインしてください</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // ---- 当月のサマリ計算（各日ごとの人数カウント）
   const daySummaries = useMemo(() => {
@@ -389,331 +408,362 @@ const ShiftManagementTool = () => {
 
   // ----------------------------- UI -----------------------------
 
+  const formattedDate = format(currentDate, 'yyyy年 M月', { locale: ja });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 print:bg-white">
-      <div className="max-w-[1400px] mx-auto">
-        {/* ヘッダー */}
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Users className="w-7 h-7 md:w-8 md:h-8 text-blue-600" />
+    <div className="flex min-h-screen bg-white overflow-hidden">
+      <NSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        currentDate={currentDate}
+        onDateChange={setCurrentDate}
+      />
+
+      <div
+        className={`
+          flex flex-col flex-1 min-h-screen
+          transition-[margin,width] duration-300 ease-in-out
+          ${isSidebarOpen ? 'ml-[280px]' : 'ml-0'}
+        `}
+      >
+        <Header
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          title={currentView === 'shift' 
+            ? 'シフト管理' 
+            : currentView === 'staff' 
+              ? 'スタッフ一覧' 
+              : '設定'
+          }
+          subtitle={currentView === 'shift' 
+            ? formattedDate 
+            : currentView === 'staff' 
+              ? 'スタッフの登録・管理' 
+              : 'システム設定'
+          }
+        />
+
+        <main className="flex-1 overflow-auto bg-gray-50 pt-1 px-4">
+          <div className="max-w-7xl mx-auto">
+            {/* 管理者モード切り替え */}
+            <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
+              <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                <button
+                  onClick={() => setIsAdmin(!isAdmin)}
+                  className={`px-4 md:px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
+                    isAdmin
+                      ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  aria-pressed={isAdmin}
+                >
+                  {isAdmin ? '管理者モード' : '閲覧モード'}
+                </button>
+
+                {/* Undo / Redo */}
+                <button
+                  onClick={undo}
+                  disabled={!isAdmin || !canUndo}
+                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
+                  title="取り消し (Ctrl+Z)"
+                >
+                  <Undo2 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={!isAdmin || !canRedo}
+                  className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
+                  title="やり直し (Ctrl+Shift+Z)"
+                >
+                  <Redo2 className="w-5 h-5" />
+                </button>
+
+                {isAdmin && (
+                  <>
+                    <button
+                      onClick={() => { setModalRole('nurse'); setShowStaffModal(true); }}
+                      className="px-3 md:px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> 看護師追加
+                    </button>
+                    <button
+                      onClick={() => { setModalRole('helper'); setShowStaffModal(true); }}
+                      className="px-3 md:px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> ヘルパー追加
+                    </button>
+                  </>
+                )}
+
+                {/* IO 操作 */}
+                <button onClick={exportJSON} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="JSONエクスポート">
+                  <Download className="w-5 h-5" />
+                </button>
+                <button onClick={exportCSV} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="CSVエクスポート">
+                  <Download className="w-5 h-5" />
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="JSONインポート">
+                  <Upload className="w-5 h-5" />
+                  <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={(e) => {
+                    const f = e.target.files?.[0]; if (f) importJSON(f);
+                  }} />
+                </button>
+                <button onClick={() => window.print()} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="印刷">
+                  <Printer className="w-5 h-5" />
+                </button>
               </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">シフト管理システム</h1>
-                <p className="text-gray-600 text-sm md:text-base">看護師・ヘルパーのシフト確認/作成</p>
-              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 md:gap-3">
-              <button
-                onClick={() => setIsAdmin(!isAdmin)}
-                className={`px-4 md:px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
-                  isAdmin
-                    ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-                aria-pressed={isAdmin}
-              >
-                {isAdmin ? '管理者モード' : '閲覧モード'}
-              </button>
+            {/* シフト表示時のみ表示 */}
+            {currentView === 'shift' && (
+              <>
+                {/* 月選択 */}
+                <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
+                  <div className="flex items-center justify-between gap-3">
+                    <button onClick={() => changeMonth(-1)} className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200">
+                      <ChevronLeft className="w-6 h-6 text-gray-600" />
+                    </button>
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-800">
+                      {new Date(currentDate).getFullYear()}年 {new Date(currentDate).getMonth() + 1}月
+                    </h2>
+                    <button onClick={() => changeMonth(1)} className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200">
+                      <ChevronRight className="w-6 h-6 text-gray-600" />
+                    </button>
+                  </div>
 
-              {/* Undo / Redo */}
-              <button
-                onClick={undo}
-                disabled={!isAdmin || !canUndo}
-                className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
-                title="取り消し (Ctrl+Z)"
-              >
-                <Undo2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={redo}
-                disabled={!isAdmin || !canRedo}
-                className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
-                title="やり直し (Ctrl+Shift+Z)"
-              >
-                <Redo2 className="w-5 h-5" />
-              </button>
-
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => { setModalRole('nurse'); setShowStaffModal(true); }}
-                    className="px-3 md:px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> 看護師追加
-                  </button>
-                  <button
-                    onClick={() => { setModalRole('helper'); setShowStaffModal(true); }}
-                    className="px-3 md:px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> ヘルパー追加
-                  </button>
-                </>
-              )}
-
-              {/* IO 操作 */}
-              <button onClick={exportJSON} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="JSONエクスポート">
-                <Download className="w-5 h-5" />
-              </button>
-              <button onClick={exportCSV} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="CSVエクスポート">
-                <Download className="w-5 h-5" />
-              </button>
-              <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="JSONインポート">
-                <Upload className="w-5 h-5" />
-                <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={(e) => {
-                  const f = e.target.files?.[0]; if (f) importJSON(f);
-                }} />
-              </button>
-              <button onClick={() => window.print()} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" title="印刷">
-                <Printer className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 月選択 */}
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
-          <div className="flex items-center justify-between gap-3">
-            <button onClick={() => changeMonth(-1)} className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200">
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </button>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800">
-              {new Date(currentDate).getFullYear()}年 {new Date(currentDate).getMonth() + 1}月
-            </h2>
-            <button onClick={() => changeMonth(1)} className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200">
-              <ChevronRight className="w-6 h-6 text-gray-600" />
-            </button>
-          </div>
-
-          {isAdmin && (
-            <div className="mt-4 flex flex-wrap gap-2 justify-center">
-              <button
-                onClick={autoAssign}
-                className="px-4 md:px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <RefreshCcw className="w-5 h-5" /> 自動シフト生成
-              </button>
-              <button
-                onClick={clearMonth}
-                className="px-4 md:px-6 py-2.5 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300"
-              >
-                月をクリア
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* シフト凡例 */}
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5" /> シフト時間
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {Object.entries(SHIFT_TYPES).map(([key, t]) => (
-              <div key={key} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                <div className={`p-2 ${t.color} rounded-lg`}>
-                  <t.Icon className="w-4 h-4 text-white" />
+                  {isAdmin && (
+                    <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                      <button
+                        onClick={autoAssign}
+                        className="px-4 md:px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        <RefreshCcw className="w-5 h-5" /> 自動シフト生成
+                      </button>
+                      <button
+                        onClick={clearMonth}
+                        className="px-4 md:px-6 py-2.5 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300"
+                      >
+                        月をクリア
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div className="font-semibold text-gray-800 text-sm">{t.name}</div>
-                  <div className="text-gray-600 text-xs">{t.time}（必要 {t.count} 名/日）</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* テーブル */}
-        <div className="bg-white rounded-xl shadow-lg border overflow-x-auto relative">
-          {/* スクロール影 */}
-          <div className="pointer-events-none absolute top-0 left-0 h-full w-6 bg-gradient-to-r from-white to-transparent" />
-          <div className="pointer-events-none absolute top-0 right-0 h-full w-6 bg-gradient-to-l from-white to-transparent" />
-
-          <table className="w-full min-w-[1100px] border-collapse">
-            <thead>
-              {/* クォータ表示行 */}
-              <tr className="bg-white sticky top-0 z-20 border-b">
-                <th className="p-2 text-left font-semibold text-gray-700 sticky left-0 bg-white">&nbsp;</th>
-                {monthDays.map((d) => {
-                  const dow = getDayOfWeek(d);
-                  const isWeekend = dow === '土' || dow === '日';
-                  const sum = daySummaries[d] || {};
-                  // 判定（必要人数に満たない/超過/一致）
-                  const statuses = [
-                    ['nurse_day', SHIFT_TYPES.nurse_day.count],
-                    ['nurse_night', SHIFT_TYPES.nurse_night.count],
-                    ['helper_early', SHIFT_TYPES.helper_early.count],
-                    ['helper_day', SHIFT_TYPES.helper_day.count],
-                    ['helper_night', SHIFT_TYPES.helper_night.count],
-                  ] as const;
-                  const okAll = statuses.every(([k, need]) => (sum[k as ShiftKey] || 0) === need);
-                  const overAny = statuses.some(([k, need]) => (sum[k as ShiftKey] || 0) > need);
-                  const badge = okAll ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : overAny ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200';
-                  const Icon = okAll ? CheckCircle2 : (overAny ? AlertTriangle : Info);
-                  return (
-                    <th key={`q-${d}`} className={`p-2 text-center min-w-[90px] ${isWeekend ? 'bg-red-50' : 'bg-gray-50'}`}>
-                      <div className={`mx-auto w-fit px-2 py-1 rounded-lg text-xs border flex items-center gap-1 ${badge}`} title="必要人数との充足状況">
-                        <Icon className="w-3.5 h-3.5" />
-                        <span>
-                          {Object.entries(sum).map(([k, v]) => `${SHIFT_TYPES[k as keyof typeof SHIFT_TYPES].name}:${v}`).join(' ')}
-                        </span>
+                {/* シフト凡例 */}
+                <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Clock className="w-5 h-5" /> シフト時間
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {Object.entries(SHIFT_TYPES).map(([key, t]) => (
+                      <div key={key} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                        <div className={`p-2 ${t.color} rounded-lg`}>
+                          <t.Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-800 text-sm">{t.name}</div>
+                          <div className="text-gray-600 text-xs">{t.time}（必要 {t.count} 名/日）</div>
+                        </div>
                       </div>
-                    </th>
-                  );
-                })}
-              </tr>
+                    ))}
+                  </div>
+                </div>
 
-              {/* 日付行 */}
-              <tr className="bg-gray-50 sticky top-10 z-10 border-b">
-                <th className="p-4 text-left font-semibold text-gray-800 sticky left-0 bg-gray-50 min-w-[160px]">スタッフ</th>
-                {monthDays.map((d) => {
-                  const dow = getDayOfWeek(d);
-                  const isWeekend = dow === '土' || dow === '日';
-                  return (
-                    <th key={d} className={`p-2 text-center min-w-[90px] ${isWeekend ? 'bg-red-50' : ''}`}>
-                      <div className="text-lg font-bold text-gray-800">{d}</div>
-                      <div className={`text-xs ${isWeekend ? 'text-red-600' : 'text-gray-600'}`}>{dow}</div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
+                {/* テーブル */}
+                <div className="bg-white rounded-xl shadow-lg border overflow-x-auto relative">
+                  {/* スクロール影 */}
+                  <div className="pointer-events-none absolute top-0 left-0 h-full w-6 bg-gradient-to-r from-white to-transparent" />
+                  <div className="pointer-events-none absolute top-0 right-0 h-full w-6 bg-gradient-to-l from-white to-transparent" />
 
-            <tbody>
-              {/* 看護師 */}
-              <tr>
-                <td colSpan={monthDays.length + 1} className="p-3 bg-blue-50 font-semibold text-blue-800 border-b">
-                  看護師 ({nurses.length}名)
-                </td>
-              </tr>
+                  <table className="w-full min-w-[1100px] border-collapse">
+                    <thead>
+                      {/* クォータ表示行 */}
+                      <tr className="bg-white sticky top-0 z-20 border-b">
+                        <th className="p-2 text-left font-semibold text-gray-700 sticky left-0 bg-white">&nbsp;</th>
+                        {monthDays.map((d) => {
+                          const dow = getDayOfWeek(d);
+                          const isWeekend = dow === '土' || dow === '日';
+                          const sum = daySummaries[d] || {};
+                          // 判定（必要人数に満たない/超過/一致）
+                          const statuses = [
+                            ['nurse_day', SHIFT_TYPES.nurse_day.count],
+                            ['nurse_night', SHIFT_TYPES.nurse_night.count],
+                            ['helper_early', SHIFT_TYPES.helper_early.count],
+                            ['helper_day', SHIFT_TYPES.helper_day.count],
+                            ['helper_night', SHIFT_TYPES.helper_night.count],
+                          ] as const;
+                          const okAll = statuses.every(([k, need]) => (sum[k as ShiftKey] || 0) === need);
+                          const overAny = statuses.some(([k, need]) => (sum[k as ShiftKey] || 0) > need);
+                          const badge = okAll ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : overAny ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200';
+                          const Icon = okAll ? CheckCircle2 : (overAny ? AlertTriangle : Info);
+                          return (
+                            <th key={`q-${d}`} className={`p-2 text-center min-w-[90px] ${isWeekend ? 'bg-red-50' : 'bg-gray-50'}`}>
+                              <div className={`mx-auto w-fit px-2 py-1 rounded-lg text-xs border flex items-center gap-1 ${badge}`} title="必要人数との充足状況">
+                                <Icon className="w-3.5 h-3.5" />
+                                <span>
+                                  {Object.entries(sum).map(([k, v]) => `${SHIFT_TYPES[k as keyof typeof SHIFT_TYPES].name}:${v}`).join(' ')}
+                                </span>
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
 
-              {nurses.map((n, idx) => (
-                <tr key={n.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} border-b hover:bg-slate-100`}>
-                  <td className="p-3 font-medium text-gray-800 sticky left-0 bg-inherit border-r">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate" title={n.name}>{n.name}</span>
-                      {isAdmin && n.custom && (
-                        <button onClick={() => removeStaff(n.id)} className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="スタッフを削除">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                      {/* 日付行 */}
+                      <tr className="bg-gray-50 sticky top-10 z-10 border-b">
+                        <th className="p-4 text-left font-semibold text-gray-800 sticky left-0 bg-gray-50 min-w-[160px]">スタッフ</th>
+                        {monthDays.map((d) => {
+                          const dow = getDayOfWeek(d);
+                          const isWeekend = dow === '土' || dow === '日';
+                          return (
+                            <th key={d} className={`p-2 text-center min-w-[90px] ${isWeekend ? 'bg-red-50' : ''}`}>
+                              <div className="text-lg font-bold text-gray-800">{d}</div>
+                              <div className={`text-xs ${isWeekend ? 'text-red-600' : 'text-gray-600'}`}>{dow}</div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
 
-                  {monthDays.map((d) => {
-                    const key = getStaffShift(n.id, d);
-                    const info = key ? SHIFT_TYPES[key] : null;
-                    const dow = getDayOfWeek(d);
-                    const isWeekend = dow === '土' || dow === '日';
-                    return (
-                      <td
-                        key={`n-${n.id}-${d}`}
-                        className={`p-1 text-center relative ${isWeekend ? 'bg-red-25' : ''}`}
-                        onDrop={(e) => onDrop(e, n.id, d)}
-                        onDragOver={onDragOver}
-                        onContextMenu={(e) => openMenu(e, n.id, d, 'nurse')}
-                      >
-                        {key && info ? (
-                          <div
-                            draggable={isAdmin}
-                            onDragStart={(e) => onDragStart(e, n.id, d, key)}
-                            onClick={() => isAdmin && clearCell(n.id, d)}
-                            className={`${info.color} ${info.text} px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 hover:scale-105 ${isAdmin ? 'cursor-move hover:shadow-lg' : ''}`}
-                            title={`${info.name} / ${info.time}`}
-                          >
-                            {info.name}
-                          </div>
-                        ) : isAdmin ? (
-                          <button
-                            onClick={(e) => openMenu(e as React.MouseEvent<HTMLButtonElement>, n.id, d, 'nurse')}
-                            className="w-full h-8 bg-gray-100 hover:bg-blue-100 rounded-lg transition-colors duration-200"
-                            title="クリックで追加"
-                          >
-                            <Edit3 className="w-4 h-4 mx-auto text-gray-400" />
-                          </button>
-                        ) : null}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                    <tbody>
+                      {/* 看護師 */}
+                      <tr>
+                        <td colSpan={monthDays.length + 1} className="p-3 bg-blue-50 font-semibold text-blue-800 border-b">
+                          看護師 ({nurses.length}名)
+                        </td>
+                      </tr>
 
-              {/* ヘルパー */}
-              <tr>
-                <td colSpan={monthDays.length + 1} className="p-3 bg-green-50 font-semibold text-green-800 border-b">
-                  ヘルパー ({helpers.length}名)
-                </td>
-              </tr>
+                      {nurses.map((n, idx) => (
+                        <tr key={n.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} border-b hover:bg-slate-100`}>
+                          <td className="p-3 font-medium text-gray-800 sticky left-0 bg-inherit border-r">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate" title={n.name}>{n.name}</span>
+                              {isAdmin && n.custom && (
+                                <button onClick={() => removeStaff(n.id)} className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="スタッフを削除">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
 
-              {helpers.map((h, idx) => (
-                <tr key={h.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} border-b hover:bg-slate-100`}>
-                  <td className="p-3 font-medium text-gray-800 sticky left-0 bg-inherit border-r">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate" title={h.name}>{h.name}</span>
-                      {isAdmin && h.custom && (
-                        <button onClick={() => removeStaff(h.id)} className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="スタッフを削除">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                          {monthDays.map((d) => {
+                            const key = getStaffShift(n.id, d);
+                            const info = key ? SHIFT_TYPES[key] : null;
+                            const dow = getDayOfWeek(d);
+                            const isWeekend = dow === '土' || dow === '日';
+                            return (
+                              <td
+                                key={`n-${n.id}-${d}`}
+                                className={`p-1 text-center relative ${isWeekend ? 'bg-red-25' : ''}`}
+                                onDrop={(e) => onDrop(e, n.id, d)}
+                                onDragOver={onDragOver}
+                                onContextMenu={(e) => openMenu(e, n.id, d, 'nurse')}
+                              >
+                                {key && info ? (
+                                  <div
+                                    draggable={isAdmin}
+                                    onDragStart={(e) => onDragStart(e, n.id, d, key)}
+                                    onClick={() => isAdmin && clearCell(n.id, d)}
+                                    className={`${info.color} ${info.text} px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 hover:scale-105 ${isAdmin ? 'cursor-move hover:shadow-lg' : ''}`}
+                                    title={`${info.name} / ${info.time}`}
+                                  >
+                                    {info.name}
+                                  </div>
+                                ) : isAdmin ? (
+                                  <button
+                                    onClick={(e) => openMenu(e as React.MouseEvent<HTMLButtonElement>, n.id, d, 'nurse')}
+                                    className="w-full h-8 bg-gray-100 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                                    title="クリックで追加"
+                                  >
+                                    <Edit3 className="w-4 h-4 mx-auto text-gray-400" />
+                                  </button>
+                                ) : null}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
 
-                  {monthDays.map((d) => {
-                    const key = getStaffShift(h.id, d);
-                    const info = key ? SHIFT_TYPES[key] : null;
-                    const dow = getDayOfWeek(d);
-                    const isWeekend = dow === '土' || dow === '日';
-                    return (
-                      <td
-                        key={`h-${h.id}-${d}`}
-                        className={`p-1 text-center relative ${isWeekend ? 'bg-red-25' : ''}`}
-                        onDrop={(e) => onDrop(e, h.id, d)}
-                        onDragOver={onDragOver}
-                        onContextMenu={(e) => openMenu(e, h.id, d, 'helper')}
-                      >
-                        {key && info ? (
-                          <div
-                            draggable={isAdmin}
-                            onDragStart={(e) => onDragStart(e, h.id, d, key)}
-                            onClick={() => isAdmin && clearCell(h.id, d)}
-                            className={`${info.color} ${info.text} px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 hover:scale-105 ${isAdmin ? 'cursor-move hover:shadow-lg' : ''}`}
-                            title={`${info.name} / ${info.time}`}
-                          >
-                            {info.name}
-                          </div>
-                        ) : isAdmin ? (
-                          <button
-                            onClick={(e) => openMenu(e as React.MouseEvent<HTMLButtonElement>, h.id, d, 'helper')}
-                            className="w-full h-8 bg-gray-100 hover:bg-green-100 rounded-lg transition-colors duration-200"
-                            title="クリックで追加"
-                          >
-                            <Edit3 className="w-4 h-4 mx-auto text-gray-400" />
-                          </button>
-                        ) : null}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      {/* ヘルパー */}
+                      <tr>
+                        <td colSpan={monthDays.length + 1} className="p-3 bg-green-50 font-semibold text-green-800 border-b">
+                          ヘルパー ({helpers.length}名)
+                        </td>
+                      </tr>
 
-        {/* 操作ヘルプ */}
-        {isAdmin && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-            <h4 className="font-semibold text-blue-800 mb-2">操作方法</h4>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>• シフトを <b>ドラッグ&ドロップ</b> で移動できます（ロール不一致は不可）</li>
-              <li>• セルを <b>右クリック/長押し</b> でメニューから追加できます</li>
-              <li>• 既存のシフトをクリックで <b>削除</b> できます</li>
-              <li>• ヘッダーのバッジは <b>必要人数の充足度</b> を表示します（緑=OK/黄=超過/赤=不足）</li>
-              <li>• Undo/Redo、JSON/CSV エクスポート、インポート、印刷に対応</li>
-            </ul>
+                      {helpers.map((h, idx) => (
+                        <tr key={h.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} border-b hover:bg-slate-100`}>
+                          <td className="p-3 font-medium text-gray-800 sticky left-0 bg-inherit border-r">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate" title={h.name}>{h.name}</span>
+                              {isAdmin && h.custom && (
+                                <button onClick={() => removeStaff(h.id)} className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="スタッフを削除">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+
+                          {monthDays.map((d) => {
+                            const key = getStaffShift(h.id, d);
+                            const info = key ? SHIFT_TYPES[key] : null;
+                            const dow = getDayOfWeek(d);
+                            const isWeekend = dow === '土' || dow === '日';
+                            return (
+                              <td
+                                key={`h-${h.id}-${d}`}
+                                className={`p-1 text-center relative ${isWeekend ? 'bg-red-25' : ''}`}
+                                onDrop={(e) => onDrop(e, h.id, d)}
+                                onDragOver={onDragOver}
+                                onContextMenu={(e) => openMenu(e, h.id, d, 'helper')}
+                              >
+                                {key && info ? (
+                                  <div
+                                    draggable={isAdmin}
+                                    onDragStart={(e) => onDragStart(e, h.id, d, key)}
+                                    onClick={() => isAdmin && clearCell(h.id, d)}
+                                    className={`${info.color} ${info.text} px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 hover:scale-105 ${isAdmin ? 'cursor-move hover:shadow-lg' : ''}`}
+                                    title={`${info.name} / ${info.time}`}
+                                  >
+                                    {info.name}
+                                  </div>
+                                ) : isAdmin ? (
+                                  <button
+                                    onClick={(e) => openMenu(e as React.MouseEvent<HTMLButtonElement>, h.id, d, 'helper')}
+                                    className="w-full h-8 bg-gray-100 hover:bg-green-100 rounded-lg transition-colors duration-200"
+                                    title="クリックで追加"
+                                  >
+                                    <Edit3 className="w-4 h-4 mx-auto text-gray-400" />
+                                  </button>
+                                ) : null}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* 操作ヘルプ */}
+            {isAdmin && currentView === 'shift' && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2">操作方法</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• シフトを <b>ドラッグ&ドロップ</b> で移動できます（ロール不一致は不可）</li>
+                  <li>• セルを <b>右クリック/長押し</b> でメニューから追加できます</li>
+                  <li>• 既存のシフトをクリックで <b>削除</b> できます</li>
+                  <li>• ヘッダーのバッジは <b>必要人数の充足度</b> を表示します（緑=OK/黄=超過/赤=不足）</li>
+                  <li>• Undo/Redo、JSON/CSV エクスポート、インポート、印刷に対応</li>
+                </ul>
+              </div>
+            )}
           </div>
-        )}
+        </main>
+      </div>
 
         {/* シフト追加メニュー（コンテキスト） */}
         {menuPos && (
@@ -787,20 +837,19 @@ const ShiftManagementTool = () => {
               </div>
             </div>
           </div>
-        )}
-      </div>
+                 )}
 
-      {/* 印刷スタイル */}
-      <style>{`
-        @media print {
-          .print\\:bg-white { background: white !important; }
-          button, input { display: none !important; }
-          .sticky { position: static !important; }
-          .shadow-lg, .shadow-2xl { box-shadow: none !important; }
-        }
-      `}</style>
-    </div>
-  );
-};
+         {/* 印刷スタイル */}
+         <style>{`
+           @media print {
+             .print\\:bg-white { background: white !important; }
+             button, input { display: none !important; }
+             .sticky { position: static !important; }
+             .shadow-lg, .shadow-2xl { box-shadow: none !important; }
+           }
+         `}</style>
+       </div>
+     );
+   };
 
-export default ShiftManagementTool;
+   export default ShiftManagementTool;

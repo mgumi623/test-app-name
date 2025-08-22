@@ -1,8 +1,6 @@
 'use client';
 
-import { MessageSquare, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
-import { useState, useRef, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface HeaderProps {

@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Loading } from '@/components/ui/loading';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,53 +30,107 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // デバッグ情報を常に出力
+  console.log('[ProtectedRoute] State:', {
+    pathname,
+    user: user ? 'exists' : 'null',
+    isLoading,
+    isRedirecting
+  });
+
+  // パス変更時にリダイレクト状態をリセット
   useEffect(() => {
-    if (!isLoading) {
-      const isPublicRoute = publicRoutes.includes(pathname);
-      
-      if (!user && !isPublicRoute) {
-        // ログインしていない状態で保護されたページにアクセスした場合
-        console.log('[ProtectedRoute] No user, redirecting to login');
-        router.push('/login');
-        return;
-      }
-      
-      if (user && pathname === '/login') {
-        // ログイン済みでログインページにアクセスした場合
-        console.log('[ProtectedRoute] User logged in, redirecting to Select');
-        setTimeout(() => {
-          router.push('/Select');
-        }, 200);
-        return;
-      }
+    setIsRedirecting(false);
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
     }
-  }, [user, isLoading, pathname, router]);
+  }, [pathname]);
 
-  // ローディング中の表示
-  // 初期ローディング状態でパブリックルートの場合は直接表示
+  // コンポーネントアンマウント時にタイムアウトをクリア
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // ローディング中は専用のUI表示
   if (isLoading) {
-    const isPublicRoute = publicRoutes.includes(pathname);
-    if (isPublicRoute) {
-      return <>{children}</>;
-    }
-
+    console.log('[ProtectedRoute] Still loading, showing loading screen');
     return (
       <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loading size="md" variant="smooth" />
           <p className="text-muted-foreground">認証情報を確認中...</p>
+          <p className="text-xs text-muted-foreground">Debug: {pathname}</p>
         </div>
       </div>
     );
   }
 
-  // 公開ルートまたはログイン済みの場合のみ表示
-  const isPublicRoute = publicRoutes.includes(pathname);
-  if (isPublicRoute || user) {
+  // リダイレクト中はローディング表示
+  if (isRedirecting) {
+    console.log('[ProtectedRoute] Redirecting, showing loading screen');
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loading size="md" variant="smooth" />
+          <p className="text-muted-foreground">リダイレクト中...</p>
+          <p className="text-xs text-muted-foreground">Debug: {pathname}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // パブリックルートの場合は常にアクセス許可
+  if (publicRoutes.includes(pathname)) {
+    console.log('[ProtectedRoute] Public route, allowing access');
+    
+    // ログイン済みユーザーがログインページにアクセスした場合はSelectページにリダイレクト
+    if (user && pathname === '/login') {
+      console.log('[ProtectedRoute] Logged in user on login page, redirecting to Select');
+      setIsRedirecting(true);
+      redirectTimeoutRef.current = setTimeout(() => {
+        router.push('/Select');
+      }, 100);
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loading size="md" variant="smooth" />
+            <p className="text-muted-foreground">リダイレクト中...</p>
+            <p className="text-xs text-muted-foreground">Debug: {pathname}</p>
+          </div>
+        </div>
+      );
+    }
+    
     return <>{children}</>;
   }
 
-  // 認証が必要だが未ログインの場合は何も表示しない
-  return null;
+  // 保護されたルートの場合
+  if (!user) {
+    console.log('[ProtectedRoute] Protected route, no user, redirecting to login');
+    setIsRedirecting(true);
+    redirectTimeoutRef.current = setTimeout(() => {
+      router.push('/login');
+    }, 100);
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-card to-muted/30 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loading size="md" variant="smooth" />
+          <p className="text-muted-foreground">リダイレクト中...</p>
+          <p className="text-xs text-muted-foreground">Debug: {pathname}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 認証済みユーザーで保護されたルートの場合
+  console.log('[ProtectedRoute] Protected route, authenticated user, allowing access');
+  return <>{children}</>;
 }

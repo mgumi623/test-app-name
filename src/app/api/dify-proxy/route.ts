@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       const raw = await req.text();
-      let json: any = {};
+      let json: Record<string, unknown> = {};
       if (raw?.trim()) {
         try { json = JSON.parse(raw); } catch { json = { prompt: raw }; }
       }
@@ -179,7 +179,18 @@ export async function POST(req: NextRequest) {
       }
 
       // JSONでchat-messagesを送信（既存の動作する実装を参考）
-      const difyBody: any = {
+      const difyBody: {
+        query: string;
+        inputs: {
+          images: Array<{
+            type: string;
+            transfer_method: string;
+            upload_file_id: string;
+          }>;
+        };
+        response_mode: string;
+        user: string;
+      } = {
         query: prompt,
         inputs: {
           images: uploadFileIds.map(upload_file_id => ({

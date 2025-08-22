@@ -189,7 +189,7 @@ export default function MessageInput({
                 disabled={isTyping}
                 title="画像を選択"
               >
-                <Image className="w-5 h-5" />
+                <Image className="w-5 h-5" alt="Upload" />
               </Button>
               
               {/* 隠しファイル入力（フォールバック用） */}
@@ -275,7 +275,7 @@ export default function MessageInput({
             {console.log('[MessageInput] Rendering selected image file:', selectedImageFile.name)}
           <div className="mt-1 px-2">
             <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded text-xs">
-              <Image className="w-2.5 h-2.5 text-green-600 flex-shrink-0" />
+              <Image className="w-2.5 h-2.5 text-green-600 flex-shrink-0" alt="" />
               <span className="text-green-800 truncate flex-1 text-xs">{selectedImageFile.name}</span>
               <button
                 type="button"

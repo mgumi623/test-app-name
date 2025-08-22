@@ -46,9 +46,19 @@ export default function Sidebar({ isOpen = true, onClose, onSidebarToggle }: Sid
     { icon: BarChart3, label: '管理分析', href: '/admin/analytics' },
   ];
 
-  const isAdmin = profile?.role === '管理者' || 
-                  profile?.role === '研究員' || 
+  const permission = user?.user_metadata?.permission as string | undefined;
+  const isAdmin = permission === '管理者' || 
+                  permission === '研究員' || 
+                  permission === '管理職' || 
                   profile?.position === '管理職';
+  
+  // デバッグ用: 権限情報をログ出力
+  console.log('[Sidebar] Permission check:', {
+    permission,
+    profilePosition: profile?.position,
+    isAdmin,
+    userMetadata: user?.user_metadata
+  });
 
   return (
     <>
@@ -62,7 +72,7 @@ export default function Sidebar({ isOpen = true, onClose, onSidebarToggle }: Sid
       
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-700 z-50
+        fixed top-0 left-0 h-full bg-[#e8f5e8] border-r border-gray-200 dark:border-neutral-700 z-50
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:fixed lg:z-40
@@ -70,8 +80,15 @@ export default function Sidebar({ isOpen = true, onClose, onSidebarToggle }: Sid
       `}>
         
         {/* Header with Light Green Gradient - Height matched to main header */}
-        <div className="bg-gradient-to-br from-green-50 via-green-100 to-green-200 dark:from-green-900/20 dark:via-green-800/20 dark:to-green-700/20 border-b border-green-200 dark:border-green-700/30 px-4 py-3 lg:px-6 h-[60px] flex items-center justify-between">
+        <div className="bg-[#e8f5e8] border-b border-green-200 dark:border-green-700/30 px-4 py-3 lg:px-6 h-[60px] flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <Image
+              src="/image/clover.svg"
+              alt="Clover"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
             <Image
               src="/logoimage/s-bot-logo.png"
               alt="S-BOT Logo"

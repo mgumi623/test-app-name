@@ -18,7 +18,7 @@ export default function TypingIndicator() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [messages.length]);
 
   return (
     <div className="flex justify-start w-full max-w-6xl mx-auto px-4 animate-fade-in mb-6">

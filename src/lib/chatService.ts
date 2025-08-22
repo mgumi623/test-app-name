@@ -1,10 +1,6 @@
 import { supabase } from './supabase';
-import { ChatSession, ChatMessage, DatabaseChatSession, DatabaseChatMessage } from '../app/AIchat/types';
+import { ChatSession, ChatMessage } from '../app/AIchat/types';
 import { handleSupabaseError } from './utils';
-
-interface DBChatSession extends Omit<DatabaseChatSession, 'chat_messages'> {
-  chat_messages?: DatabaseChatMessage[];
-}
 
 // 入力検証関数
 const validateMessageInput = (content: string, sender: string): { isValid: boolean; error?: string } => {
@@ -43,10 +39,12 @@ export class ChatService {
           user_id,
           created_at,
           updated_at,
+          hospital_id,
           chat_messages (
             id,
             content,
-            sender,
+            sender_kind,
+            sender_user_id,
             created_at
           )
         `)
@@ -69,7 +67,7 @@ export class ChatService {
         messages: (session.chat_messages || []).map((msg) => ({
           id: msg.id,
           text: msg.content,
-          sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
+          sender: msg.sender_kind === 'assistant' ? 'ai' : msg.sender_kind,
           timestamp: new Date(msg.created_at),
         })) as ChatMessage[],
         lastMessage: new Date(session.updated_at),
@@ -105,30 +103,37 @@ export class ChatService {
           user_id,
           created_at,
           updated_at,
+          hospital_id,
           chat_messages (
             id,
             content,
-            sender,
+            sender_kind,
+            sender_user_id,
             created_at
           )
         `)
         .eq('id', sessionId)
         .single();
 
-      if (error || !session) {
-        console.log('[ChatService] Session not found or error:', error);
+      if (error) {
+        console.error('[ChatService] Failed to fetch chat session:', handleSupabaseError(error));
         return null;
       }
 
-      const mappedSession = {
+      if (!session) {
+        console.log('[ChatService] No chat session found');
+        return null;
+      }
+
+      const mappedSession: ChatSession = {
         id: session.id,
         title: session.title,
         messages: (session.chat_messages || []).map((msg) => ({
           id: msg.id,
           text: msg.content,
-          sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
+          sender: msg.sender_kind === 'assistant' ? 'ai' : msg.sender_kind,
           timestamp: new Date(msg.created_at),
-        })),
+        })) as ChatMessage[],
         lastMessage: new Date(session.updated_at),
         user_id: session.user_id,
         metadata: {
@@ -154,7 +159,7 @@ export class ChatService {
     try {
       let query = this.supabase
         .from('chat_messages')
-        .select('id, content, sender, created_at') // ← type を削除
+        .select('id, content, sender_kind, sender_user_id, created_at')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true });
 
@@ -162,18 +167,25 @@ export class ChatService {
         query = query.limit(opts.limit);
       }
 
+      if (opts?.signal) {
+        query = query.abortSignal(opts.signal);
+      }
+
       const { data: messages, error } = await query;
 
-      if (error || !messages) return [];
+      if (error) {
+        console.error('[ChatService] Failed to fetch chat messages:', handleSupabaseError(error));
+        return [];
+      }
 
-      return messages.map((msg) => ({
+      return (messages || []).map((msg) => ({
         id: msg.id,
         text: msg.content,
-        sender: msg.sender === 'assistant' ? 'ai' : msg.sender,
+        sender: msg.sender_kind === 'assistant' ? 'ai' : msg.sender_kind,
         timestamp: new Date(msg.created_at),
-      }));
+      })) as ChatMessage[];
     } catch (error) {
-      console.error('Failed to fetch messages:', error);
+      console.error('[ChatService] Failed to fetch chat messages:', error);
       return [];
     }
   }
@@ -216,9 +228,9 @@ export class ChatService {
   }
 
   // メッセージ保存
-  async saveMessage(sessionId: string, content: string, sender: string): Promise<string | null> {
+  async saveMessage(sessionId: string, content: string, sender: string, userId?: string): Promise<string | null> {
     try {
-      console.log('[ChatService] Saving message:', { sessionId, content: content.substring(0, 50), sender });
+      console.log('[ChatService] Saving message:', { sessionId, content: content.substring(0, 50), sender, userId });
       
       // 入力検証
       const validation = validateMessageInput(content, sender);
@@ -236,7 +248,8 @@ export class ChatService {
       const message = {
         session_id: sessionId,
         content: content.trim(), // 前後の空白を除去
-        sender: normalizedSender,
+        sender_kind: normalizedSender,
+        sender_user_id: normalizedSender === 'user' ? userId : null,
       };
 
       const { data, error } = await this.supabase
@@ -280,7 +293,7 @@ export class ChatService {
     }
   }
 
-  // セッションの更新日時を更新
+  // セッション更新日時の更新
   private async updateSessionTimestamp(sessionId: string): Promise<void> {
     try {
       await this.supabase
@@ -290,26 +303,6 @@ export class ChatService {
     } catch (error) {
       console.error('Error updating session timestamp:', error);
     }
-  }
-
-  // Realtime購読の設定
-  subscribeToMessageInserts(
-    options: { table: string; sessionId: string },
-    callback: (payload: { new: { id: string; session_id: string; content: string; sender: 'user' | 'ai'; created_at: string; } }) => void
-  ) {
-    return this.supabase
-      .channel(`chat_messages:${options.sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: options.table,
-          filter: `session_id=eq.${options.sessionId}`,
-        },
-        callback
-      )
-      .subscribe();
   }
 }
 

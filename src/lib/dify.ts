@@ -15,7 +15,7 @@ const API_ENDPOINT = '/api/dify-proxy';
 
 const logFormData = (fd: FormData) => {
   try {
-    const entries: any[] = [];
+    const entries: [string, string][] = [];
     for (const [k, v] of fd.entries()) {
       if (v instanceof File) entries.push([k, `File(name=${v.name}, size=${v.size}, type=${v.type})`]);
       else entries.push([k, String(v).slice(0, 200)]);

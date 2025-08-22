@@ -14,7 +14,20 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick, onSearchClick, sidebarOpen = false, onSidebarToggle }: HeaderProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, isLoading } = useAuth();
+  const permission = user?.user_metadata?.permission as string | undefined;
+
+  // デバッグ情報を出力
+  console.log('[Header] Auth state:', {
+    user: user ? 'exists' : 'null',
+    profile: profile ? 'exists' : 'null',
+    isLoading,
+    userName: profile?.name,
+    userEmail: user?.email,
+    department: profile?.department,
+    role: profile?.role,
+    position: profile?.position
+  });
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm h-[60px] flex items-center">
@@ -75,29 +88,41 @@ export default function Header({ onMenuClick, onSearchClick, sidebarOpen = false
         <div className="flex items-center gap-3">
           {/* User Info */}
           <div className="hidden sm:flex items-center gap-3">
-            <div className="flex flex-col text-xs text-right">
-              <span className="font-medium text-gray-900">
-                {profile?.name || user?.email || 'ユーザー'}
-              </span>
-              <div className="flex items-center gap-2 text-gray-500 justify-end">
-                <span>{profile?.department || '部署未設定'}</span>
-                {profile?.role && (
-                  <>
-                    <span>/</span>
-                    <span className="text-gray-400">{profile.role}</span>
-                  </>
-                )}
-                {profile?.position && (
-                  <>
-                    <span>/</span>
-                    <span className="text-gray-400">{profile.position}</span>
-                  </>
-                )}
+            {isLoading ? (
+              <div className="flex flex-col text-xs text-right">
+                <span className="font-medium text-gray-900">読み込み中...</span>
+                <span className="text-gray-500">認証情報を確認中</span>
               </div>
-            </div>
+            ) : user ? (
+              <div className="flex flex-col text-xs text-right">
+                <span className="font-medium text-gray-900">
+                  {profile?.name || 'ユーザー'}
+                </span>
+                <div className="flex items-center gap-2 text-gray-500 justify-end">
+                  <span>{profile?.hospital || '病院名未設定'}</span>
+                  {profile?.position && (
+                    <>
+                      <span>/</span>
+                      <span className="text-gray-400">{profile.position}</span>
+                    </>
+                  )}
+                  {(profile?.role || permission) && (
+                    <>
+                      <span>/</span>
+                      <span className="text-gray-400">{profile?.role ?? permission}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col text-xs text-right">
+                <span className="font-medium text-gray-900">未ログイン</span>
+                <span className="text-gray-500">ログインしてください</span>
+              </div>
+            )}
             <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
               <span className="text-sm font-semibold text-green-700">
-                {profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                {profile?.name?.charAt(0) || 'U'}
               </span>
             </div>
           </div>

@@ -14,27 +14,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     // 初回マウント後に表示開始
+    console.log('[ClientLayout] Component mounted');
     setMounted(true);
   }, []);
 
+  // マウント前は最小限の表示
   if (!mounted) {
-    // 初回描画時は透明な状態で待機
+    console.log('[ClientLayout] Not mounted yet, showing minimal layout');
     return (
       <div 
         style={{ 
           minHeight: '100vh',
-          opacity: 0,
           backgroundColor: 'hsl(var(--background))'
         }} 
       />
     );
   }
 
+  console.log('[ClientLayout] Rendering full layout with pathname:', pathname);
+
   return (
     <SupabaseProvider>
       <AuthProvider>
         <ProtectedRoute>
-        <AnimatePresence mode="wait" initial={false}>
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={pathname}
               initial={{ opacity: 0, scale: 0.98, y: 8 }}

@@ -3,8 +3,7 @@ import { ChatSession } from '../types/chat';
 import { sendMessageToDify, ModeType } from '../../../lib/dify';
 import { chatService } from '../../../lib/chatService';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getMobileInfo, categorizeError, getMobileErrorMessage, checkNetworkStatus } from '../../../lib/mobileUtils';
-import { withErrorHandling, transformMessage } from '../utils/validation';
+import { transformMessage } from '../utils/validation';
 
 interface UseChatSessionsOptions {
   initialMode: ModeType;
@@ -93,7 +92,7 @@ export const useChatSessions = ({
 
         console.log('[useChatSessions] Initial message created:', { sender: initialMessage.sender, text: initialMessage.text.substring(0, 50) });
 
-        await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender);
+        await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender, user?.id);
 
         const newChat: ChatSession = {
           id: sessionId,
@@ -158,7 +157,7 @@ export const useChatSessions = ({
 
       console.log('[useChatSessions] Initial message created (createNewChat):', { sender: initialMessage.sender, text: initialMessage.text.substring(0, 50) });
 
-      await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender);
+              await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender, user?.id);
 
       // セッション一覧を更新
       await loadSessions();
@@ -291,7 +290,7 @@ export const useChatSessions = ({
         } : null);
       }
 
-      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender);
+      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender, user?.id);
       await loadCurrentSession(currentChatId);
       setIsTyping(true);
 

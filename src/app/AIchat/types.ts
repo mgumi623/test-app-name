@@ -18,6 +18,7 @@ export interface ChatSession {
     currentMode: string;
     messageCount: number;
     hasUnread: boolean;
+    isTemporary: boolean;
   };
 }
 
@@ -27,12 +28,14 @@ export interface DatabaseChatSession {
   title: string;
   created_at: string;
   updated_at: string;
+  hospital_id?: string | null;
 }
 
 export interface DatabaseChatMessage {
   id: string;
   session_id: string;
   content: string;
-  sender: 'user' | 'ai';
+  sender_kind: 'user' | 'ai' | 'system';
+  sender_user_id?: string | null;
   created_at: string;
 }

@@ -26,5 +26,5 @@ export interface ChatMetadata {
   currentMode: string;
   messageCount: number;
   hasUnread: boolean;
-  isTemporary?: boolean;
+  isTemporary: boolean;
 }
