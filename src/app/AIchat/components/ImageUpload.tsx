@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Image, X, File } from 'lucide-react';
+import { Upload, X, File } from 'lucide-react';
 
 interface ImageUploadProps {
   onFileSelect: (file: File) => void;
@@ -117,7 +117,7 @@ export default function ImageUpload({
       />
       
       <div className="flex flex-col items-center space-y-2">
-        <Image className="w-8 h-8 text-gray-400" />
+        <Upload className="w-8 h-8 text-gray-400" />
         <div className="text-sm">
           <span className="text-gray-600 font-medium">クリックして画像を選択</span>
           <br />
