@@ -1,6 +1,6 @@
 import { memo } from 'react';
-import { User, Copy, Check } from 'lucide-react';
-import { ChatMessage } from '../../types/chat';
+import { User, Copy, Check, Bot } from 'lucide-react';
+import { ChatMessage } from '@/app/AIchat/types/chat';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -11,7 +11,6 @@ interface MessageItemProps {
   onCopyMessage: (text: string, messageId: string) => void;
 }
 
-// メッセージアバター
 const MessageAvatar = memo(function MessageAvatar({ sender }: { sender: 'user' | 'ai' | 'system' }) {
   return (
     <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
@@ -28,7 +27,6 @@ const MessageAvatar = memo(function MessageAvatar({ sender }: { sender: 'user' |
   );
 });
 
-// コピーボタン
 const CopyButton = memo(function CopyButton({ 
   messageId, 
   text, 
@@ -57,7 +55,6 @@ const CopyButton = memo(function CopyButton({
   );
 });
 
-// システムメッセージ
 const SystemMessage = memo(function SystemMessage({ text }: { text: string }) {
   return (
     <div className="flex justify-center px-4">
@@ -68,19 +65,16 @@ const SystemMessage = memo(function SystemMessage({ text }: { text: string }) {
   );
 });
 
-// メインのメッセージコンポーネント
 export const MessageItem = memo(function MessageItem({
   message,
   index,
   copiedMessageId,
   onCopyMessage
 }: MessageItemProps) {
-  // システムメッセージの場合は表示しない
   if (message.type === 'mode_change') {
     return null;
   }
 
-  // 通常のメッセージ
   return (
     <div
       className="animate-fade-in-up mb-6"
@@ -120,7 +114,6 @@ export const MessageItem = memo(function MessageItem({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // カスタム比較関数で不要な再レンダリングを防ぐ
   return (
     prevProps.message.id === nextProps.message.id &&
     prevProps.copiedMessageId === nextProps.copiedMessageId

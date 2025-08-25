@@ -6,18 +6,29 @@ export type Timestamp = GenericTimestamp;
 export interface ChatMessage {
   id: ID;
   text: string;
-  sender: 'user' | 'ai' | 'system';
+  sender: 'user' | 'assistant' | 'system' | 'tool';
   timestamp: Timestamp;
   type?: 'mode_change' | 'normal' | 'system';
 }
 
-export interface ChatSession {
+export interface ChatSessionMetadata {
   id: ID;
   title: string;
-  messages: ChatMessage[];
   lastMessage: Timestamp;
   user_id: ID;
-  metadata: ChatMetadata;
+  metadata: ChatMetadata & {
+    lastMessagePreview?: string;
+  };
+}
+
+export interface ChatSession extends ChatSessionMetadata {
+  messages: ChatMessage[];
+}
+
+export interface ChatMessagesPage {
+  messages: ChatMessage[];
+  hasMore: boolean;
+  nextCursor?: string;
 }
 
 export interface ChatMetadata {

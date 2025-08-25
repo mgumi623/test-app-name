@@ -79,7 +79,7 @@ export default function DepartmentSelection() {
       if (dept && categories.includes(dept)) setSelectedCategory(dept);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, me, categories]);
+  }, [isLoading, me, categories, profile?.department]);
 
   // キーボードショートカット
   useEffect(() => {
@@ -117,8 +117,8 @@ export default function DepartmentSelection() {
 
   // 🆕 アナウンスポップアップ表示のチェック（user_metadata 依存を廃止）
   useEffect(() => {
-    // 参照部門：me.profile.staffInfo.department.name（なければ空文字で全体向けを拾う想定）
-    const userDepartment = me?.profile.staffInfo?.department?.name ?? '';
+    // 参照部門：profile.department（なければ空文字で全体向けを拾う想定）
+    const userDepartment = profile?.department ?? '';
 
     if (me && !announcementPopupChecked && !announcementsLoading && announcements.length > 0) {
       try {
@@ -145,7 +145,7 @@ export default function DepartmentSelection() {
         setAnnouncementPopupChecked(true);
       }
     }
-  }, [me, announcementPopupChecked, announcementsLoading, announcements.length, getPopupAnnouncements]);
+  }, [me, profile?.department, announcementPopupChecked, announcementsLoading, announcements.length, getPopupAnnouncements]);
 
   const handleNavigate = (opt: Option) => {
     if (isPending) return; // 二重押下防止

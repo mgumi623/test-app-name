@@ -1,7 +1,7 @@
 export interface ChatMessage {
   id: string;
   text: string;
-  sender: 'user' | 'ai' | 'system';
+  sender: 'user' | 'assistant' | 'system' | 'tool';
   timestamp: Date;
   type?: 'mode_change' | 'normal' | 'system';
 }
@@ -35,7 +35,7 @@ export interface DatabaseChatMessage {
   id: string;
   session_id: string;
   content: string;
-  sender_kind: 'user' | 'ai' | 'system';
+  sender_kind: 'user' | 'assistant' | 'system' | 'tool';
   sender_user_id?: string | null;
   created_at: string;
 }

@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       if (raw?.trim()) {
         try { json = JSON.parse(raw); } catch { json = { prompt: raw }; }
       }
-      prompt = json?.prompt || '';
+      prompt = (json?.prompt as string) || '';
       mode = (json?.mode as ModeType) || '通常';
     }
 

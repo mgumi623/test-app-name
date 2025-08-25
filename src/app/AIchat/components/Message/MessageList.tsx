@@ -1,6 +1,6 @@
 import { memo, useRef } from 'react';
 import { ChatMessage } from '../../types/chat';
-import { MessageItem } from './MessageItem';
+import { MessageItem } from '@/components/chat/MessageItem';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useVirtualizer } from '@tanstack/react-virtual';
 

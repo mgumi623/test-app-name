@@ -114,7 +114,10 @@ export default function CorporatePage() {
     if (postType === 'vision') {
       const newVision: Vision = {
         id: visions.length + 1,
-        ...data,
+        title: data.title || '無題のビジョン',
+        content: data.content,
+        type: data.type || 'short',
+        priority: data.priority || 'medium',
         author: userRole === 'management' ? '経営陣' : 'マネージャー',
         date: new Date().toISOString().split('T')[0],
         likes: 0,

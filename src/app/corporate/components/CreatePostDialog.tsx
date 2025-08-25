@@ -25,10 +25,10 @@ interface CreatePostDialogProps {
   onOpenChange: (open: boolean) => void;
   type: 'message' | 'vision';
   onSubmit: (data: {
-    title: string;
+    title?: string;
     content: string;
-    type: string;
-    priority: string;
+    type?: 'short' | 'long';
+    priority?: 'high' | 'medium' | 'low';
   }) => void;
 }
 
@@ -38,7 +38,12 @@ export function CreatePostDialog({
   type,
   onSubmit,
 }: CreatePostDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    content: string;
+    type: 'short' | 'long';
+    priority: 'high' | 'medium' | 'low';
+  }>({
     title: '',
     content: '',
     type: 'short',
@@ -97,7 +102,7 @@ export function CreatePostDialog({
                 <label className="text-sm font-medium">期間</label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value) =>
+                  onValueChange={(value: 'short' | 'long') =>
                     setFormData({ ...formData, type: value })
                   }
                 >
@@ -114,7 +119,7 @@ export function CreatePostDialog({
                 <label className="text-sm font-medium">優先度</label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value) =>
+                  onValueChange={(value: 'high' | 'medium' | 'low') =>
                     setFormData({ ...formData, priority: value })
                   }
                 >

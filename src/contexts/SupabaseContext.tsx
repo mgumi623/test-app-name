@@ -7,7 +7,7 @@ type SupabaseContextType = {
   supabase: typeof supabase;
 };
 
-const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
+const SupabaseContext = createContext<SupabaseContextType>({ supabase });
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   return (

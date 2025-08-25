@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { supabase } from '@/lib/supabase';
+import { signIn as authSignIn } from '@/lib/authService';
 import { Eye, EyeOff, Lock, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,36 +94,15 @@ export default function LoginPage() {
 
     try {
       const email = `${sanitizedStaffId}@example.com`;
-      console.log('[Login] Using email:', email);
-      
-      // Supabase接続テスト
-      console.log('[Login] Testing Supabase connection...');
-      const { data: testData, error: testError } = await supabase
-        .from('profiles')
-        .select('count')
-        .limit(1);
-      
-      console.log('[Login] Supabase connection test:', { testData, testError });
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: sanitizedPassword
-      });
-
-      console.log('[Login] Supabase response:', { data, error });
+      const { user, error } = await authSignIn({ email, password: sanitizedPassword });
 
       if (error) {
-        console.error('[Login] Authentication error:', error);
         setError('IDまたはパスワードが間違っています');
         return;
       }
 
-      if (data?.user) {
-        // ログイン成功後、プロファイルデータの取得を待機
-        console.log('[Login] Login successful, user:', data.user);
-        console.log('[Login] Waiting for AuthContext to handle redirect');
-        // AuthContextがサインインイベントを検知して自動的にリダイレクトします
-      }
+      // Selectページへのリダイレクトは
+      // AuthContextのonAuthStateChangeで自動的に処理されます
     } catch (error) {
       console.error('[Login] Unexpected error:', error);
       setError('ログインに失敗しました。再度お試しください。');

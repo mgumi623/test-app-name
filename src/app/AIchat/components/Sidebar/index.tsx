@@ -1,31 +1,15 @@
-import { ChatSession } from '../../types';
-import SidebarHeader from './SidebarHeader';
-import ChatList from './ChatList';
+import React from 'react';
 
 interface SidebarProps {
   isOpen: boolean;
-  currentSession: ChatSession | null;
-  sessions: ChatSession[];
-  currentChatId: string;
-  onSelectChat: (id: string) => void;
-  onCreateNewChat: () => void;
-  onDeleteChat: (chatId: string) => void;
-  onDeleteAllChats: () => void;
   onCloseSidebar: () => void;
-  isLoading?: boolean;
+  onClearChat: () => void;
 }
 
 export default function Sidebar({
   isOpen,
-  currentSession,
-  sessions,
-  currentChatId,
-  onSelectChat,
-  onCreateNewChat,
-  onDeleteChat,
-  onDeleteAllChats,
   onCloseSidebar,
-  isLoading = false,
+  onClearChat
 }: SidebarProps) {
   return (
     <>
@@ -34,21 +18,23 @@ export default function Sidebar({
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full max-h-screen">
-          <SidebarHeader 
-            onCreateNewChat={onCreateNewChat}
-            onCloseSidebar={onCloseSidebar}
-            isLoading={isLoading}
-          />
-          <div className="flex-1 min-h-0">
-            <ChatList
-              currentSession={currentSession}
-              sessions={sessions}
-              currentChatId={currentChatId}
-              onSelectChat={onSelectChat}
-              onDeleteChat={onDeleteChat}
-              onDeleteAllChats={onDeleteAllChats}
-            />
+        <div className="flex flex-col h-full p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">メニュー</h2>
+            <button
+              onClick={onCloseSidebar}
+              className="p-2 hover:bg-gray-200 rounded-lg"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1">
+            <button
+              onClick={onClearChat}
+              className="w-full py-2 px-4 bg-white hover:bg-gray-100 rounded-lg text-left mb-2"
+            >
+              チャットをクリア
+            </button>
           </div>
         </div>
       </div>

@@ -9,6 +9,11 @@ export function checkEnvironmentVariables() {
     'NEXT_PUBLIC_SUPABASE_ANON_KEY'
   ];
   
+  // 推奨環境変数（開発時）
+  const recommendedVars = [
+    'SUPABASE_SERVICE_ROLE_KEY'
+  ];
+  
   // 各環境変数の確認
   requiredVars.forEach(varName => {
     const value = process.env[varName];
@@ -17,6 +22,17 @@ export function checkEnvironmentVariables() {
       length: value?.length || 0,
       firstChars: value?.substring(0, 20) || 'UNDEFINED',
       isValidUrl: varName.includes('URL') ? (value?.includes('supabase.co') || false) : 'N/A'
+    });
+  });
+  
+  // 推奨環境変数の確認
+  console.log('\n推奨環境変数:');
+  recommendedVars.forEach(varName => {
+    const value = process.env[varName];
+    console.log(`${varName}:`, {
+      exists: !!value,
+      length: value?.length || 0,
+      firstChars: value?.substring(0, 20) || 'UNDEFINED'
     });
   });
   

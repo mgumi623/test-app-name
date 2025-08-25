@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ChatMessage } from '../../types';
-import MessageItem from './MessageItem';
+import { MessageItem } from '@/components/chat/MessageItem';
 import TypingIndicator from './TypingIndicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 

@@ -106,10 +106,10 @@ export default function Header({ onMenuClick, onSearchClick, sidebarOpen = false
                       <span className="text-gray-400">{profile.position}</span>
                     </>
                   )}
-                  {(profile?.role || permission) && (
+                  {profile?.profession && (
                     <>
                       <span>/</span>
-                      <span className="text-gray-400">{profile?.role ?? permission}</span>
+                      <span className="text-gray-400">{profile.profession}</span>
                     </>
                   )}
                 </div>

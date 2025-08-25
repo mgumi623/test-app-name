@@ -9,6 +9,8 @@ export interface UserProfile {
   hospital: string | null;
   role: string | null;
   staff_id: string | null;
+  profession: string | null;
+  primary_hospital_id: string | null; // 主所属病院ID
   created_at: string;
   updated_at: string;
 }
@@ -17,8 +19,10 @@ export interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   isLoading: boolean;
-  error: string | null;  // ← 追加
+  error: string | null;
+  signUp: (email: string, password: string, name?: string) => Promise<{ user: User | null; error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ user: User | null; error: string | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  clearAuthError: () => void; // ← 追加
+  clearAuthError: () => void;
 }

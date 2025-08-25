@@ -116,10 +116,14 @@ export const useChatSessions = ({
       } catch (newChatError) {
         console.error('[useChatSessions] Error creating new chat:', newChatError);
         setIsLoading(false);
+        // エラー時は空のセッションを設定してUIを表示可能にする
+        setCurrentSession(null);
       }
     } catch (error) {
       console.error('[useChatSessions] Error loading current session:', error);
       setIsLoading(false);
+      // エラー時は空のセッションを設定してUIを表示可能にする
+      setCurrentSession(null);
     }
   }, [user?.id, currentMode]);
 
@@ -144,6 +148,8 @@ export const useChatSessions = ({
         return null;
       }
 
+      console.log('[useChatSessions] Session created with ID:', sessionId);
+
       const initialMessage = transformMessage({
         id: crypto.randomUUID(),
         text: `こんにちは！私はAIアシスタントです。
@@ -157,7 +163,7 @@ export const useChatSessions = ({
 
       console.log('[useChatSessions] Initial message created (createNewChat):', { sender: initialMessage.sender, text: initialMessage.text.substring(0, 50) });
 
-              await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender, user?.id);
+      await chatService.saveMessage(sessionId, initialMessage.text, initialMessage.sender, user?.id);
 
       // セッション一覧を更新
       await loadSessions();
@@ -188,6 +194,8 @@ export const useChatSessions = ({
     } catch (error) {
       console.error('[useChatSessions] Error selecting chat:', error);
       setIsLoading(false);
+      // エラー時は現在のセッションをクリア
+      setCurrentSession(null);
     }
   }, [loadCurrentSession]);
 
