@@ -375,7 +375,7 @@ export const useChatSessions = ({
       console.error('Error sending message:', error);
       setIsTyping(false);
     }
-  }, [currentChatId, currentMode, currentSession, updateCurrentSession, loadCurrentSession, chatService]);
+  }, [currentChatId, currentMode, currentSession, updateCurrentSession]);
 
   // セッション自動リロード
   useEffect(() => {
@@ -392,7 +392,7 @@ export const useChatSessions = ({
       setCurrentSession(null);
       setIsLoading(false);
     }
-  }, [user?.id, loadCurrentSession, loadSessions]);
+  }, [user?.id]);
 
   const messages = currentSession?.messages ?? [];
 
