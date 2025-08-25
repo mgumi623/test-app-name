@@ -62,9 +62,9 @@ export default function AnnouncementsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   // ユーザーの部署と権限取得
-  const userDepartment = user?.user_metadata?.department as string;
-  const userPermission = user?.user_metadata?.permission as string;
-  const isAdmin = userPermission === '研究員' || userPermission === '管理職';
+  const userDepartment = user?.email?.split('@')[0] || null;
+  const userPermission = user?.email?.endsWith('@admin.com') ? '管理職' : '一般';
+  const isAdmin = userPermission === '管理職';
 
   // フィルタリングされたアナウンス
   const filteredAnnouncements = useMemo(() => {
