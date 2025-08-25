@@ -51,7 +51,7 @@ export class ChatService {
 }
 
   // チャットセッションの作成
-  async createChatSession(userId: string): Promise<string> {
+  createChatSession = async (userId: string): Promise<string> => {
     const sessionId = this.generateId();
     const session: ChatSession = {
       id: sessionId,
@@ -73,25 +73,25 @@ export class ChatService {
   }
 
   // チャットセッションの取得
-  async getChatSession(sessionId: string): Promise<ChatSession | null> {
+  getChatSession = async (sessionId: string): Promise<ChatSession | null> => {
     return this.sessions.get(sessionId) || null;
   }
 
   // チャットセッション一覧の取得
-  async getChatSessions(userId: string): Promise<ChatSession[]> {
+  getChatSessions = async (userId: string): Promise<ChatSession[]> => {
     return Array.from(this.sessions.values())
       .filter(session => session.user_id === userId)
       .sort((a, b) => b.lastMessage.getTime() - a.lastMessage.getTime());
   }
 
   // チャットセッションの削除
-  async deleteChatSession(sessionId: string): Promise<void> {
+  deleteChatSession = async (sessionId: string): Promise<void> => {
     this.sessions.delete(sessionId);
     this.messages.delete(sessionId);
   }
 
   // メッセージの保存
-  async saveMessage(sessionId: string, text: string, sender: 'user' | 'ai' | 'system', userId?: string): Promise<void> {
+  saveMessage = async (sessionId: string, text: string, sender: 'user' | 'ai' | 'system', userId?: string): Promise<void> => {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
