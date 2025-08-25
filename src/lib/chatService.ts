@@ -1,6 +1,5 @@
 import { ChatMessage, ChatSession } from '../app/AIchat/types/chat';
 import crypto from 'crypto';
-import crypto from 'crypto';
 
 export class ChatService {
   private messages: Map<string, ChatMessage[]> = new Map();
