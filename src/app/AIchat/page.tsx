@@ -47,8 +47,8 @@ const AIChatApp: React.FC = () => {
     currentMode,
     setCurrentMode,
     sendMessage,
-    loadMessages,
-    clearChat
+    loadCurrentSession,
+    deleteAllChats
   } = useChatSessions({
     initialMode: selectedMode
   });
@@ -74,7 +74,7 @@ const AIChatApp: React.FC = () => {
   };
 
   useEffect(() => {
-    loadMessages();
+    loadCurrentSession();
   }, [loadMessages]);
 
   if (isLoading) {

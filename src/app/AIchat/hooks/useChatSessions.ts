@@ -4,6 +4,7 @@ import { sendMessageToDify, ModeType } from '../../../lib/dify';
 import { chatService } from '../../../lib/chatService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { transformMessage } from '../utils/validation';
+import crypto from 'crypto';
 
 interface UseChatSessionsOptions {
   initialMode: ModeType;

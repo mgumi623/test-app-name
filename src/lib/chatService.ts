@@ -1,8 +1,10 @@
-import { ChatMessage } from '../app/AIchat/types';
+import { ChatMessage, ChatSession } from '../app/AIchat/types/chat';
+import crypto from 'crypto';
 import crypto from 'crypto';
 
 export class ChatService {
   private messages: Map<string, ChatMessage[]> = new Map();
+  private sessions: Map<string, ChatSession> = new Map();
   private currentSessionId: string | null = null;
 
   private generateId(): string {
@@ -47,5 +49,69 @@ export class ChatService {
     this.currentSessionId = null;
   }
 }
+
+  // チャットセッションの作成
+  async createChatSession(userId: string): Promise<string> {
+    const sessionId = this.generateId();
+    const session: ChatSession = {
+      id: sessionId,
+      title: '新しいチャット',
+      messages: [],
+      lastMessage: new Date(),
+      user_id: userId,
+      metadata: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        currentMode: '通常',
+        messageCount: 0,
+        hasUnread: false,
+        isTemporary: false
+      }
+    };
+    this.sessions.set(sessionId, session);
+    return sessionId;
+  }
+
+  // チャットセッションの取得
+  async getChatSession(sessionId: string): Promise<ChatSession | null> {
+    return this.sessions.get(sessionId) || null;
+  }
+
+  // チャットセッション一覧の取得
+  async getChatSessions(userId: string): Promise<ChatSession[]> {
+    return Array.from(this.sessions.values())
+      .filter(session => session.user_id === userId)
+      .sort((a, b) => b.lastMessage.getTime() - a.lastMessage.getTime());
+  }
+
+  // チャットセッションの削除
+  async deleteChatSession(sessionId: string): Promise<void> {
+    this.sessions.delete(sessionId);
+    this.messages.delete(sessionId);
+  }
+
+  // メッセージの保存
+  async saveMessage(sessionId: string, text: string, sender: 'user' | 'ai' | 'system', userId?: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    const message: ChatMessage = {
+      id: this.generateId(),
+      text,
+      sender,
+      timestamp: new Date(),
+      type: 'normal'
+    };
+
+    const messages = this.messages.get(sessionId) || [];
+    messages.push(message);
+    this.messages.set(sessionId, messages);
+
+    session.messages = messages;
+    session.lastMessage = new Date();
+    session.metadata.messageCount = messages.length;
+    session.metadata.updatedAt = new Date();
+    this.sessions.set(sessionId, session);
+  }
 
 export const chatService = new ChatService();
