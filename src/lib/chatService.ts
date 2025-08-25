@@ -47,8 +47,6 @@ export class ChatService {
     }
     this.currentSessionId = null;
   }
-}
-
   // チャットセッションの作成
   createChatSession = async (userId: string): Promise<string> => {
     const sessionId = this.generateId();
@@ -112,5 +110,7 @@ export class ChatService {
     session.metadata.updatedAt = new Date();
     this.sessions.set(sessionId, session);
   }
+
+}
 
 export const chatService = new ChatService();
