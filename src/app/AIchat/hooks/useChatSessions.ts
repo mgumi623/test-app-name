@@ -47,7 +47,9 @@ export const useChatSessions = ({
   }, []);
 
   // 現在のセッションの読み込み
-  const loadCurrentSession = useCallback(async (sessionId?: string) => {
+  const loadCurrentSession = useCallback(async (sessionId?: string, force: boolean = false) => {
+    // 既にセッションがある場合は強制フラグがない限り再ロードしない
+    if (currentSession && !force) return;
     console.log('[useChatSessions] loadCurrentSession called', { sessionId, userId: user?.id });
     
     if (!user?.id) {
@@ -377,20 +379,24 @@ export const useChatSessions = ({
 
   // セッション自動リロード
   useEffect(() => {
-    if (user?.id) {
-      console.log('[useChatSessions] User authenticated, loading sessions...');
-      loadSessions();
-      if (!currentSession) {
-        console.log('[useChatSessions] No current session, creating new one...');
-        loadCurrentSession();
+    const initializeChat = async () => {
+      if (user?.id) {
+        console.log('[useChatSessions] User authenticated, loading sessions...');
+        await loadSessions();
+        if (!currentSession) {
+          console.log('[useChatSessions] No current session, creating new one...');
+          await loadCurrentSession();
+        }
+      } else {
+        console.log('[useChatSessions] No user ID, clearing sessions');
+        setSessions([]);
+        setCurrentSession(null);
+        setIsLoading(false);
       }
-    } else {
-      console.log('[useChatSessions] No user ID, clearing sessions');
-      setSessions([]);
-      setCurrentSession(null);
-      setIsLoading(false);
-    }
-  }, [user?.id]);
+    };
+    
+    initializeChat();
+  }, [user?.id, currentSession?.id]);
 
   const messages = currentSession?.messages ?? [];
 
