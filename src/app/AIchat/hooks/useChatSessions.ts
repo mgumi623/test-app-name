@@ -4,7 +4,7 @@ import { sendMessageToDify, ModeType } from '../../../lib/dify';
 import { chatService } from '../../../lib/chatService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { transformMessage } from '../utils/validation';
-import crypto from 'crypto';
+import { generateUUID } from '../../../lib/chatService';
 
 interface UseChatSessionsOptions {
   initialMode: ModeType;
@@ -81,7 +81,7 @@ export const useChatSessions = ({
         }
 
         const initialMessage = transformMessage({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           text: `こんにちは！私はAIアシスタントです。
 医療に関する一般的な質問に回答させていただきます。
 
@@ -152,7 +152,7 @@ export const useChatSessions = ({
       console.log('[useChatSessions] Session created with ID:', sessionId);
 
       const initialMessage = transformMessage({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         text: `こんにちは！私はAIアシスタントです。
 医療に関する一般的な質問に回答させていただきます。
 
@@ -282,7 +282,7 @@ export const useChatSessions = ({
       }
 
       const userMessage = transformMessage({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         text: messageText,
         sender: 'user',
         timestamp: new Date(),
@@ -328,7 +328,7 @@ export const useChatSessions = ({
         }
 
         const aiMessage = transformMessage({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           text: difyRes.answer,
           sender: 'ai',
           timestamp: new Date(),
@@ -350,7 +350,7 @@ export const useChatSessions = ({
       } catch (error) {
         console.error('Error getting AI response:', error);
         const errorMessage = transformMessage({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           text: error instanceof Error ? error.message : '応答の取得に失敗しました',
           sender: 'ai',
           timestamp: new Date(),
