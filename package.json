@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:auth": "node scripts/test-auth.js",
+    "migrate:db": "node scripts/migrate-database.js"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

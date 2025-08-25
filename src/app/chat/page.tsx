@@ -65,5 +65,4 @@ export default function ChatPage() {
       <MessageInput onSend={handleSend} disabled={isLoading} />
     </div>
   );
-  );
 }

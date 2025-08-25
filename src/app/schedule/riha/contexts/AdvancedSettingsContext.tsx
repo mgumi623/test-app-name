@@ -33,18 +33,37 @@ export function AdvancedSettingsProvider({ children }: { children: React.ReactNo
 
   async function loadSettings() {
     try {
+      // id = 1 の設定行を前提として取得。無ければ作成。
       const { data, error } = await supabase
         .from('admin_settings')
-        .select('weekly_five_shifts, week_starts_sunday, senior_staff_adjustment')
-        .single();
+        .select('id, weekly_five_shifts, weekly_sunday, senior_staff_adjustment')
+        .eq('id', 1)
+        .maybeSingle();
 
       if (error) throw error;
 
-      if (data) {
+      if (!data) {
+        // デフォルト行を作成
+        const { error: upsertError } = await supabase
+          .from('admin_settings')
+          .upsert({
+            id: 1,
+            weekly_five_shifts: true,
+            weekly_sunday: true,
+            senior_staff_adjustment: true,
+          });
+        if (upsertError) throw upsertError;
+
         setSettings({
-          weeklyFiveShifts: data.weekly_five_shifts ?? true,
-          weekStartsSunday: data.week_starts_sunday ?? true,
-          seniorStaffAdjustment: data.senior_staff_adjustment ?? true,
+          weeklyFiveShifts: true,
+          weekStartsSunday: true,
+          seniorStaffAdjustment: true,
+        });
+      } else {
+        setSettings({
+          weeklyFiveShifts: (data as any).weekly_five_shifts ?? true,
+          weekStartsSunday: (data as any).weekly_sunday ?? true,
+          seniorStaffAdjustment: (data as any).senior_staff_adjustment ?? true,
         });
       }
     } catch (error) {
@@ -57,7 +76,7 @@ export function AdvancedSettingsProvider({ children }: { children: React.ReactNo
   async function updateSettings(setting: keyof AdvancedSettings, value: boolean) {
     try {
       const columnName = setting === 'weeklyFiveShifts' ? 'weekly_five_shifts' : 
-        setting === 'weekStartsSunday' ? 'week_starts_sunday' : 
+        setting === 'weekStartsSunday' ? 'weekly_sunday' : 
         'senior_staff_adjustment';
 
       const { error } = await supabase

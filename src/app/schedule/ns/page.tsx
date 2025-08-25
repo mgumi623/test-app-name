@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import Header from '../riha/components/Header';
+import PageTransition from '../riha/components/PageTransition';
 import NSidebar from './components/NSidebar';
 import {
   ChevronLeft,
@@ -151,6 +152,16 @@ const seedStaff: Staff[] = [
   ...initialHelperNames.map((n, i) => ({ id: `H${i + 1}`, name: n, role: 'helper' as const })),
 ];
 
+// 配列をシャッフル（Fisher–Yates）
+const shuffleArray = <T,>(input: T[]) => {
+  const arr = [...input];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 // ----------------------------- 本体 -----------------------------
 
 const ShiftManagementTool = () => {
@@ -159,6 +170,9 @@ const ShiftManagementTool = () => {
   const [isAdmin, setIsAdmin] = useLocalStorage<boolean>('ui.isAdmin', false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState<'shift' | 'staff' | 'settings'>('shift');
+  
+  // localStorage 復元時に string になることがあるため常に Date に正規化
+  const safeCurrentDate = useMemo(() => new Date(currentDate as unknown as string | number | Date), [currentDate]);
 
   // スタッフと割当（ローカル保存）
   const [staff, setStaff] = useLocalStorage<Staff[]>('data.staff.v1', seedStaff);
@@ -264,11 +278,17 @@ const ShiftManagementTool = () => {
   const autoAssign = () => {
     const totalDays = daysInMonth;
     const next: Shifts = {};
-    const ns = [...nurses];
-    const hs = [...helpers];
+    // 各回で順序をシャッフルしてランダム性を付与
+    const ns = shuffleArray([...nurses]);
+    const hs = shuffleArray([...helpers]);
 
     // 簡易ラウンドロビン用のインデックス
-    let ni = 0, nn = 0, he = 0, hd = 0, hn = 0;
+    const randomIndex = (len: number) => (len > 0 ? Math.floor(Math.random() * len) : 0);
+    let ni = randomIndex(ns.length),
+        nn = randomIndex(ns.length),
+        he = randomIndex(hs.length),
+        hd = randomIndex(hs.length),
+        hn = randomIndex(hs.length);
 
     const rnd = <T,>(arr: T[], start: number) => {
       // start から一巡して最初の要素を取る
@@ -408,7 +428,7 @@ const ShiftManagementTool = () => {
 
   // ----------------------------- UI -----------------------------
 
-  const formattedDate = format(currentDate, 'yyyy年 M月', { locale: ja });
+  const formattedDate = format(safeCurrentDate, 'yyyy年 M月', { locale: ja });
 
   return (
     <div className="flex min-h-screen bg-white overflow-hidden">
@@ -417,7 +437,7 @@ const ShiftManagementTool = () => {
         onClose={() => setIsSidebarOpen(false)}
         currentView={currentView}
         onViewChange={setCurrentView}
-        currentDate={currentDate}
+        currentDate={safeCurrentDate}
         onDateChange={setCurrentDate}
       />
 
@@ -446,6 +466,7 @@ const ShiftManagementTool = () => {
 
         <main className="flex-1 overflow-auto bg-gray-50 pt-1 px-4">
           <div className="max-w-7xl mx-auto">
+            <PageTransition currentView={currentView}>
             {/* 管理者モード切り替え */}
             <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border">
               <div className="flex flex-wrap items-center gap-2 md:gap-3">
@@ -761,6 +782,7 @@ const ShiftManagementTool = () => {
                 </ul>
               </div>
             )}
+            </PageTransition>
           </div>
         </main>
       </div>

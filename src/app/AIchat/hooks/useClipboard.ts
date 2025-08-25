@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
 export const useClipboard = () => {
-  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string>();
 
   const copyToClipboard = async (text: string, messageId: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedMessageId(messageId);
-      setTimeout(() => setCopiedMessageId(null), 2000);
+      setTimeout(() => setCopiedMessageId(undefined), 2000);
     } catch {
       /* noop */
     }

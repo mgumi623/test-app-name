@@ -1,6 +1,6 @@
 // /app/api/dify-proxy/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { logApiKeyStatus } from '../../../utils/envCheck';
+import { logApiKeyStatus } from '../../../src/utils/envCheck';
 
 export const runtime = 'nodejs';
 
@@ -36,9 +36,6 @@ export async function POST(req: NextRequest) {
   let mode: ModeType = '通常';
   let prompt = '';
   let timeoutId: NodeJS.Timeout | null = null;
-  const wantsStream =
-    req.nextUrl.searchParams.get('stream') === '1' ||
-    req.headers.get('x-stream') === 'true';
 
   const imageFiles: File[] = [];
   let audioFile: File | null = null;
@@ -268,56 +265,6 @@ export async function POST(req: NextRequest) {
     // ====== テキストのみ ======
     } else {
       if (mode === '議事録作成') throw new Error('議事録作成モードでは音声ファイルが必要です。');
-
-      // ストリーミング要求なら SSE をそのままプロキシ
-      if (wantsStream) {
-        const upstream = await fetch('https://api.dify.ai/v1/chat-messages', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: prompt,
-            inputs: {},
-            response_mode: 'streaming',
-            user,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!upstream.ok || !upstream.body) {
-          const t = await upstream.text();
-          throw new Error(`Dify streaming error: ${upstream.status} - ${t}`);
-        }
-
-        const stream = new ReadableStream({
-          start(controller) {
-            const reader = upstream.body!.getReader();
-            function push() {
-              reader.read().then(({ done, value }) => {
-                if (done) {
-                  controller.enqueue(new TextEncoder().encode('\n\n'));
-                  controller.close();
-                  return;
-                }
-                controller.enqueue(value);
-                push();
-              }).catch((err) => {
-                controller.error(err);
-              });
-            }
-            push();
-          }
-        });
-
-        if (timeoutId) clearTimeout(timeoutId);
-        return new Response(stream, {
-          headers: {
-            'Content-Type': 'text/event-stream; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            Connection: 'keep-alive',
-            'X-Accel-Buffering': 'no',
-          },
-        });
-      }
 
       res = await fetch('https://api.dify.ai/v1/chat-messages', {
         method: 'POST',

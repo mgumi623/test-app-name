@@ -72,7 +72,7 @@ export default function DepartmentSelection() {
     [selectedId, categoryFilteredOptions]
   );
 
-  // 🆕 初期カテゴリをスタッフの部署に寄せる（存在すれば）
+  // 🆕 初期カテゴリをスタッフの部署に寄せる（DB調整中はスキップ）
   useEffect(() => {
     if (!isLoading && me && selectedCategory === 'すべて') {
       const dept = profile?.department;

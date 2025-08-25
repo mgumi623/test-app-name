@@ -2,67 +2,61 @@ import React from 'react';
 
 interface TextPart {
   text: string;
-  type: 'normal' | 'bold' | 'heading';
+  type: 'normal' | 'bold' | 'heading1' | 'heading2' | 'heading3';
 }
 
-// テキストを解析してフォーマット情報を抽出する関数
 export const parseFormattedText = (text: string): TextPart[] => {
   const parts: TextPart[] = [];
   const lines = text.split('\n');
 
-  lines.forEach((line, lineIndex) => {
+  lines.forEach((rawLine, lineIndex) => {
+    const line = rawLine.replace(/-/g, ' '); // - を空白に置換
+
     if (lineIndex > 0) {
-      // 改行を追加（最初の行以外）
       parts.push({ text: '\n', type: 'normal' });
     }
 
-    // ###で始まる行の処理
-    if (line.startsWith('###')) {
-      // ###を削除してトリムした内容を取得
-      const headingText = line.replace(/^###\s*/, '');
-      parts.push({
-        text: headingText,
-        type: 'heading'
-      });
+    // # 見出し検出
+    const h3 = line.match(/^###\s*(.*)$/);
+    const h2 = line.match(/^##\s*(.*)$/);
+    const h1 = line.match(/^#\s*(.*)$/);
+    if (h3) {
+      parts.push({ text: h3[1], type: 'heading3' });
+      return;
+    }
+    if (h2) {
+      parts.push({ text: h2[1], type: 'heading2' });
+      return;
+    }
+    if (h1) {
+      parts.push({ text: h1[1], type: 'heading1' });
       return;
     }
 
-    // **で囲まれた部分の処理
+    // ** で囲まれた箇所（濃いネイビー）
     const boldRegex = /\*\*([^*]+)\*\*/g;
     let lastIndex = 0;
-    let match;
+    let match: RegExpExecArray | null;
 
     while ((match = boldRegex.exec(line)) !== null) {
-      // **の前のテキスト（通常テキスト）
       if (match.index > lastIndex) {
-        parts.push({
-          text: line.slice(lastIndex, match.index),
-          type: 'normal',
-        });
+        parts.push({ text: line.slice(lastIndex, match.index), type: 'normal' });
       }
-
-      // **で囲まれたテキスト（太字＋色変更）
       parts.push({
         text: match[1],
         type: 'bold',
       });
-
       lastIndex = boldRegex.lastIndex;
     }
 
-    // 最後の**の後のテキスト（通常テキスト）
     if (lastIndex < line.length) {
-      parts.push({
-        text: line.slice(lastIndex),
-        type: 'normal',
-      });
+      parts.push({ text: line.slice(lastIndex), type: 'normal' });
     }
   });
 
   return parts;
 };
 
-// テキストを適切にレンダリングするコンポーネント
 interface FormattedTextProps {
   text: string;
   className?: string;
@@ -74,38 +68,38 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
   return (
     <span className={className}>
       {parts.map((part, index) => {
-        if (part.type === 'heading') {
+        if (part.type === 'heading1') {
           return (
-            <span
-              key={index}
-              className="text-xl font-bold text-[#0a1845] block"
-            >
+            <span key={index} className="text-2xl lg:text-3xl font-extrabold text-[#0a1845] block">
               {part.text}
             </span>
           );
         }
-
+        if (part.type === 'heading2') {
+          return (
+            <span key={index} className="text-xl lg:text-2xl font-bold text-[#0a1845] block">
+              {part.text}
+            </span>
+          );
+        }
+        if (part.type === 'heading3') {
+          return (
+            <span key={index} className="text-lg lg:text-xl font-semibold text-[#0a1845] block">
+              {part.text}
+            </span>
+          );
+        }
         if (part.type === 'bold') {
           return (
-            <span
-              key={index}
-              className="font-bold text-blue-600"
-            >
+            <span key={index} className="font-semibold text-blue-500">
               {part.text}
             </span>
           );
         }
-
-        // 改行の処理
         if (part.text === '\n') {
           return <br key={index} />;
         }
-
-        return (
-          <span key={index}>
-            {part.text}
-          </span>
-        );
+        return <span key={index}>{part.text}</span>;
       })}
     </span>
   );

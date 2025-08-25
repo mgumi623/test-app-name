@@ -1,8 +1,15 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { securityMiddleware } from '@/middleware/security';
 
 export async function middleware(request: NextRequest) {
+  // セキュリティミドルウェアを最初に実行
+  const securityResponse = securityMiddleware(request);
+  if (securityResponse.status !== 200) {
+    return securityResponse;
+  }
+
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req: request, res });
 
@@ -11,8 +18,8 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // 保護されたルートのパターン
-  const protectedRoutes = ['/Select', '/schedule', '/corporate', '/AIchat'];
+  // 保護されたルートのパターン（DB調整中はAIチャットを除外）
+  const protectedRoutes = ['/Select', '/schedule', '/corporate'];
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   );

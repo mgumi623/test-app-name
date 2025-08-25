@@ -23,7 +23,7 @@ export default function ShiftCreation() {
   }, []);
   const { teams, reorderTeams } = useTeams();
 
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: { destination?: { index: number }, source: { index: number } }) => {
     if (!result.destination) return;
 
     try {

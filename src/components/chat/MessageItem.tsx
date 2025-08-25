@@ -11,7 +11,7 @@ interface MessageItemProps {
   onCopyMessage: (text: string, messageId: string) => void;
 }
 
-const MessageAvatar = memo(function MessageAvatar({ sender }: { sender: 'user' | 'ai' | 'system' }) {
+const MessageAvatar = memo(function MessageAvatar({ sender }: { sender: 'user' | 'assistant' | 'system' | 'tool' }) {
   return (
     <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
       <AvatarFallback
