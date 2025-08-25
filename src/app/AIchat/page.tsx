@@ -75,7 +75,7 @@ const AIChatApp: React.FC = () => {
 
   useEffect(() => {
     loadCurrentSession();
-  }, [loadMessages]);
+  }, [loadCurrentSession]);
 
   if (isLoading) {
     return <LoadingUI />;
@@ -88,7 +88,7 @@ const AIChatApp: React.FC = () => {
         <Sidebar
           isOpen={isSidebarOpen}
           onCloseSidebar={() => setIsSidebarOpen(false)}
-          onClearChat={clearChat}
+          onClearChat={deleteAllChats}
         />
 
         <div className={`flex flex-col flex-1 h-screen overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'ml-80' : ''}`}>
