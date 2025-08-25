@@ -1,5 +1,11 @@
 import { ChatMessage, ChatSession } from '../app/AIchat/types/chat';
-import crypto from 'crypto';
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 export class ChatService {
   private messages: Map<string, ChatMessage[]> = new Map();
@@ -7,7 +13,7 @@ export class ChatService {
   private currentSessionId: string | null = null;
 
   private generateId(): string {
-    return crypto.randomUUID();
+    return generateUUID();
   }
 
   // メッセージの送信
