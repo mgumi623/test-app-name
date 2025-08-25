@@ -8,6 +8,10 @@ interface Profile {
   id: string;
   role: string;
   department: string | null;
+  name?: string;
+  hospital?: string;
+  position?: string;
+  profession?: string;
 }
 
 interface User {
@@ -20,8 +24,8 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   error: string | null;
-  signUp: (email: string, password: string, name: string) => Promise<{ user: User | null; error: Error | null; }>;
-  signIn: (email: string, password: string) => Promise<{ user: User | null; error: Error | null; }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ user: User | null; error: any; }>;
+  signIn: (email: string, password: string) => Promise<{ user: User | null; error: any; }>;
   signOut: () => Promise<void>;
   clearAuthError: () => void;
 }

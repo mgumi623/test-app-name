@@ -46,18 +46,13 @@ export default function Sidebar({ isOpen = true, onClose, onSidebarToggle }: Sid
     { icon: BarChart3, label: '管理分析', href: '/admin/analytics' },
   ];
 
-  const permission = user?.user_metadata?.permission as string | undefined;
-  const isAdmin = permission === '管理者' || 
-                  permission === '研究員' || 
-                  permission === '管理職' || 
-                  profile?.position === '管理職';
+  const isAdmin = user?.email?.endsWith('@admin.com') || profile?.position === '管理職';
   
   // デバッグ用: 権限情報をログ出力
   console.log('[Sidebar] Permission check:', {
-    permission,
     profilePosition: profile?.position,
     isAdmin,
-    userMetadata: user?.user_metadata
+    userEmail: user?.email
   });
 
   return (

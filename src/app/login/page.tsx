@@ -29,7 +29,7 @@ export default function LoginPage() {
     profile: profile ? 'exists' : 'null',
     authLoading,
     userEmail: user?.email,
-    userName: profile?.name
+    userProfile: profile
   });
 
   // 環境変数の確認（開発時のみ）

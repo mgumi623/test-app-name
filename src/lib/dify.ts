@@ -47,7 +47,7 @@ export async function sendMessageToDify({
  * テキストのみの問い合わせをストリーミングで送信し、トークン単位でコールバックします。
  * 画像/音声は従来どおり blocking を利用してください。
  */
-export async function sendMessageToDifyStream(options: Pick<SendMessageOptions, 'prompt' | 'mode'> & { onToken?: (delta: string) => void }) {
+export async function sendMessageToDifyStream({ prompt, mode = '通常', onToken }: Pick<SendMessageOptions, 'prompt' | 'mode'> & { onToken?: (delta: string) => void }) {
   const url = `${API_ENDPOINT}?stream=1`;
   const res = await fetch(url, {
     method: 'POST',
@@ -98,16 +98,16 @@ export async function sendMessageToDifyStream(options: Pick<SendMessageOptions, 
             json?.data?.answer ?? '';
           if (delta) {
             fullText += String(delta);
-            if (typeof options?.onToken === 'function') {
-              options.onToken(String(delta));
+            if (typeof onToken === 'function') {
+              onToken(String(delta));
             }
           }
         } catch {
           // JSONでない場合はそのままテキストとして扱う
           if (payload) {
             fullText += payload;
-            if (typeof options?.onToken === 'function') {
-              options.onToken(payload);
+            if (typeof onToken === 'function') {
+              onToken(payload);
             }
           }
         }

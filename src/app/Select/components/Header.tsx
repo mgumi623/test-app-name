@@ -15,7 +15,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick, onSearchClick, sidebarOpen = false, onSidebarToggle }: HeaderProps) {
   const { user, profile, isLoading } = useAuth();
-  const permission = user?.user_metadata?.permission as string | undefined;
+  const permission = user?.email?.endsWith('@admin.com') ? '管理職' : '一般';
 
   // デバッグ情報を出力
   console.log('[Header] Auth state:', {

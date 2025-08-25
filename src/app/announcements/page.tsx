@@ -73,7 +73,7 @@ export default function AnnouncementsPage() {
       if (!isAdmin) {
         const isDepartmentMatch = 
           announcement.targetDepartments.includes('全部署') || 
-          announcement.targetDepartments.includes(userDepartment) ||
+          (userDepartment && announcement.targetDepartments.includes(userDepartment)) ||
           !userDepartment;
         if (!isDepartmentMatch) return false;
       }
