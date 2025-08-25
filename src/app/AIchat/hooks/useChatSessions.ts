@@ -299,9 +299,8 @@ export const useChatSessions = ({
         } : null);
       }
 
-      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender, user?.id);
-      await loadCurrentSession(currentChatId);
       setIsTyping(true);
+      await chatService.saveMessage(currentChatId, userMessage.text, userMessage.sender, user?.id);
 
       try {
         console.log('[useChatSessions] Calling sendMessageToDify with imageFile:', {
@@ -346,7 +345,6 @@ export const useChatSessions = ({
         }
 
         await chatService.saveMessage(currentChatId, aiMessage.text, aiMessage.sender);
-        await loadCurrentSession(currentChatId);
       } catch (error) {
         console.error('Error getting AI response:', error);
         const errorMessage = transformMessage({

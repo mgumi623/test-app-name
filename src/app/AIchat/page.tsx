@@ -62,14 +62,14 @@ const AIChatApp: React.FC = () => {
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
-    await sendMessage(inputText);
     setInputText('');
+    await sendMessage(inputText);
   };
 
-  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      await handleSendMessage();
+      handleSendMessage();
     }
   };
 
